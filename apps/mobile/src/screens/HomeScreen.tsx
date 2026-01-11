@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { FAB, Text, Button, useTheme } from 'react-native-paper';
 import NetInfo from '@react-native-community/netinfo';
 import { getEntries, deleteEntry, syncPendingEntries, Entry as LocalEntry } from '../services/entriesService';
+import { mobileAuthService } from '../services/authService';
 import { ENTRIES_API } from '../../config';
 import EntryCard from '../components/EntryCard';
 
@@ -21,20 +22,27 @@ export default function HomeScreen({ navigation }: any) {
       await load();
       // Attempt background sync of pending entries whenever returning to Home
       try {
+        const token = await mobileAuthService.getToken();
         await syncPendingEntries(async (entry: LocalEntry) => {
           // If entry has a remoteId, try to patch; else create
           try {
             if (entry.remoteId) {
               const res = await fetch(`${ENTRIES_API}/${entry.remoteId}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(token && { Authorization: `Bearer ${token}` }),
+                },
                 body: JSON.stringify({ content: entry.notes || '', mood: entry.mood }),
               });
               return { ok: res.ok, data: res.ok ? await res.json() : undefined };
             } else {
               const res = await fetch(ENTRIES_API, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(token && { Authorization: `Bearer ${token}` }),
+                },
                 body: JSON.stringify({ content: entry.notes || '', mood: entry.mood }),
               });
               return { ok: res.ok, data: res.ok ? await res.json() : undefined };
@@ -65,14 +73,35 @@ export default function HomeScreen({ navigation }: any) {
     navigation.navigate('AddEntry', { entry });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     Alert.alert('Delete entry?', 'This action cannot be undone.', [
       { text: 'Keep it', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
+          // Find the entry to get its remoteId
+          const entry = entries.find(e => e.id === id || e._id === id);
+
+          // Delete locally first
           await deleteEntry(id);
+
+          // Try to delete from remote if we have a remoteId and are online
+          if (entry?.remoteId && isConnected) {
+            try {
+              const token = await mobileAuthService.getToken();
+              await fetch(`${ENTRIES_API}/${entry.remoteId}`, {
+                method: 'DELETE',
+                headers: {
+                  ...(token && { Authorization: `Bearer ${token}` }),
+                },
+              });
+            } catch (err) {
+              // Ignore remote delete errors - local delete already happened
+              console.log('Failed to delete from remote:', err);
+            }
+          }
+
           load();
         },
       },

@@ -59,7 +59,25 @@ app.post("/entries", authMiddleware, async (req, res) => {
   }
 });
 
-// 5. Update Entry content (auth optional but recommended)
+// 5. Get Single Entry by ID (auth optional but recommended)
+app.get("/entries/:id", authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const entry = await Entry.findById(id);
+
+    if (!entry) {
+      res.status(404).json({ error: "Entry not found" });
+      return;
+    }
+
+    res.json(entry);
+  } catch (error) {
+    console.error("Error fetching entry:", error);
+    res.status(500).json({ error: "Failed to fetch entry" });
+  }
+});
+
+// 6. Update Entry content (auth optional but recommended)
 app.patch("/entries/:id", authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
@@ -88,6 +106,24 @@ app.patch("/entries/:id", authMiddleware, async (req, res) => {
   } catch (error) {
     console.error("Error updating entry:", error);
     res.status(500).json({ error: "Failed to update entry" });
+  }
+});
+
+// 7. Delete Entry (auth optional but recommended)
+app.delete("/entries/:id", authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Entry.findByIdAndDelete(id);
+
+    if (!deleted) {
+      res.status(404).json({ error: "Entry not found" });
+      return;
+    }
+
+    res.json({ message: "Entry deleted successfully", entry: deleted });
+  } catch (error) {
+    console.error("Error deleting entry:", error);
+    res.status(500).json({ error: "Failed to delete entry" });
   }
 });
 

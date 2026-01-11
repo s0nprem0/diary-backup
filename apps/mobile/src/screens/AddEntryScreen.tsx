@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TextInput, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
 import { Button, Text, useTheme, Snackbar, Chip, ActivityIndicator } from 'react-native-paper';
 import { addEntry, updateEntry } from '../services/entriesService';
+import { mobileAuthService } from '../services/authService';
 import { ENTRIES_API } from '../../config';
 import { inferMood } from '../services/mood';
 import { MOOD_OPTIONS, getMoodEmoji } from '../services/moodUtils';
@@ -60,6 +61,8 @@ export default function AddEntryScreen({ navigation, route }: any) {
 
     // Local-first: write locally immediately, then attempt remote sync in background
     try {
+      const token = await mobileAuthService.getToken();
+
       if (isEditing) {
         // Update locally first
         await updateEntry(existing.id || existing._id, { notes, mood, synced: false });
@@ -70,7 +73,10 @@ export default function AddEntryScreen({ navigation, route }: any) {
           try {
             const res = await fetch(`${ENTRIES_API}/${remoteId}`, {
               method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token && { Authorization: `Bearer ${token}` }),
+              },
               body: JSON.stringify({ content: notes, mood }),
             });
             if (res.ok) {
@@ -88,7 +94,10 @@ export default function AddEntryScreen({ navigation, route }: any) {
         try {
           const res = await fetch(ENTRIES_API, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token && { Authorization: `Bearer ${token}` }),
+            },
             body: JSON.stringify({ content: notes || '', mood }),
           });
           if (res.ok) {

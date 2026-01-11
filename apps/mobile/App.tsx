@@ -11,6 +11,7 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import BottomTabs from './src/navigation/BottomTabs';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { mobileAuthService } from './src/services/authService';
 import { lightTheme, darkTheme } from './src/theme';
 import { syncPendingEntries } from './src/services/entriesService';
 import { ENTRIES_API } from './config';
@@ -18,9 +19,13 @@ import { ENTRIES_API } from './config';
 // helper to post a local entry to the server
 const postEntryToServer = async (entry: any) => {
   try {
+    const token = await mobileAuthService.getToken();
     const res = await fetch(`${ENTRIES_API}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
       body: JSON.stringify({ content: entry.notes || '', date: entry.date, mood: entry.mood }),
     });
     const data = await res.json();
