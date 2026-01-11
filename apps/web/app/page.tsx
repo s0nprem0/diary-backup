@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/AuthProvider";
+import { authService } from "@/lib/auth";
 
 interface Entry {
   _id: string;
@@ -11,19 +12,18 @@ interface Entry {
 }
 
 export default function Home() {
-  const router = useRouter();
+  const { logout } = useAuth();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
 
-
   useEffect(() => {
-    // Fetch entries (no auth required)
+    // Fetch entries - auth is done locally, but we can add token for future backend validation
     fetch("http://localhost:3001/entries")
       .then((res) => res.json())
       .then((data) => setEntries(data))
       .catch((err) => console.error("Failed to fetch entries:", err));
-  }, [router]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,10 +31,12 @@ export default function Home() {
     setLoading(true);
 
     try {
+      const token = authService.getToken();
       const res = await fetch("http://localhost:3001/entries", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify({ content: text }),
       });
@@ -48,8 +50,6 @@ export default function Home() {
       setLoading(false);
     }
   };
-
-  // No auth required
 
   // Helper for colors
   const getMoodColor = (mood: string) => {
@@ -66,7 +66,12 @@ export default function Home() {
     <main className="min-h-screen p-8 max-w-2xl mx-auto font-sans">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">📘 Mood Diary</h1>
-        {/* auth removed: logout not needed */}
+        <button
+          onClick={logout}
+          className="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors text-sm"
+        >
+          Logout
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="mb-8 gap-4 flex flex-col">
