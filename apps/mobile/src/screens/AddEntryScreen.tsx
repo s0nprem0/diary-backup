@@ -15,8 +15,18 @@ export default function AddEntryScreen({ navigation, route }: any) {
   const [mood, setMood] = useState(existing?.mood || 'Neutral');
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAutoDetected, setIsAutoDetected] = useState(false);
   const isEditing = !!existing;
   const initialNotes = existing?.notes || '';
+
+  // Auto-detect mood from notes content (for new entries only)
+  useEffect(() => {
+    if (!isEditing && notes.trim()) {
+      const { mood: predictedMood } = inferMood(notes);
+      setMood(predictedMood);
+      setIsAutoDetected(true);
+    }
+  }, [notes, isEditing]);
 
   // Warn on unsaved changes when navigating away
   useEffect(() => {
@@ -139,28 +149,27 @@ export default function AddEntryScreen({ navigation, route }: any) {
             {isEditing ? 'Edit Entry' : 'How are you feeling?'}
           </Text>
 
-          {/* Mood Selector */}
+          {/* Mood Display */}
           <View style={{ marginBottom: 20 }}>
-            <Text variant="labelLarge" style={{ marginBottom: 8, color: colors.onSurface }}>
-              Your mood
+            <Text variant="labelLarge" style={{ marginBottom: 12, color: colors.onSurface }}>
+              Detected mood
             </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {MOOD_OPTIONS.map((m) => (
-                <Chip
-                  key={m}
-                  selected={mood === m}
-                  mode={mood === m ? 'flat' : 'outlined'}
-                  onPress={() => setMood(m)}
-                  style={{
-                    backgroundColor: mood === m ? colors.primary : 'transparent',
-                  }}
-                  textStyle={{
-                    color: mood === m ? colors.onPrimary : colors.onSurface,
-                  }}
-                >
-                  {getMoodEmoji(m)} {m}
-                </Chip>
-              ))}
+            <View style={{
+              backgroundColor: colors.primary,
+              borderRadius: 12,
+              padding: 16,
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Text style={{ fontSize: 40, marginBottom: 8 }}>
+                {getMoodEmoji(mood)}
+              </Text>
+              <Text variant="titleLarge" style={{ color: colors.onPrimary }}>
+                {mood}
+              </Text>
+              <Text variant="labelSmall" style={{ color: colors.onPrimary, marginTop: 4, opacity: 0.8 }}>
+                Based on your entry
+              </Text>
             </View>
           </View>
 
