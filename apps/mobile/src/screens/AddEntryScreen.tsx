@@ -88,9 +88,10 @@ export default function AddEntryScreen({ navigation, route }: any) {
 
         <TextInput
           placeholder="Write a short note..."
+          placeholderTextColor={colors.onSurfaceVariant || colors.onSurface}
           value={notes}
           onChangeText={setNotes}
-          style={styles.textarea}
+          style={[styles.textarea, { borderColor: colors.outline || colors.surfaceVariant || colors.surface, backgroundColor: colors.surface }]}
           multiline
         />
         <Button mode="contained" onPress={handleSave} style={{ marginTop: 12 }}>
@@ -102,5 +103,5 @@ export default function AddEntryScreen({ navigation, route }: any) {
 }
 
 const styles = StyleSheet.create({
-  textarea: { height: 120, borderWidth: 1, borderColor: '#eee', padding: 12, borderRadius: 8, marginTop: 12 },
+  textarea: { height: 120, borderWidth: 1, padding: 12, borderRadius: 8, marginTop: 12 },
 });

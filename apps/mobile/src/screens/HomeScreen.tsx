@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
-import { FAB, Text, Button } from 'react-native-paper';
+import { FAB, Text, Button, useTheme } from 'react-native-paper';
 import { getEntries, deleteEntry } from '../services/entriesService';
 import EntryCard from '../components/EntryCard';
 
@@ -36,8 +36,10 @@ export default function HomeScreen({ navigation }: any) {
     ]);
   };
 
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }] }>
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text variant="headlineMedium">Today</Text>
         {entries.length === 0 ? (
@@ -57,6 +59,6 @@ export default function HomeScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1 },
   fab: { position: 'absolute', right: 16, bottom: 24 },
 });
