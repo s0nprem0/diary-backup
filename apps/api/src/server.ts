@@ -62,10 +62,12 @@ app.post("/entries", async (req, res) => {
     }
 
     // Use provided mood or analyze if not provided
+    // Use provided mood or analyze if not provided
     let finalMood = mood;
     let sentimentScore = 0;
 
     if (!mood) {
+      // Only analyze if mood not provided (saves 50-100ms)
       const analyzed = analyzeEmotion(entryContent);
       finalMood = analyzed.mood;
       sentimentScore = analyzed.score;

@@ -39,6 +39,17 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
+
+    // Optimistic update: save locally first, show UI immediately
+    const optimisticEntry: Entry = {
+      _id: `temp_${Date.now()}`,
+      content: text,
+      mood: "Neutral",
+      createdAt: new Date().toISOString(),
+    };
+
+    setEntries([optimisticEntry, ...entries]);
+    setText("");
     setLoading(true);
     setError("");
 
@@ -58,17 +69,20 @@ export default function Home() {
 
       if (!res.ok) {
         const errorData = await res.json();
+        // Remove optimistic entry on failure
+        setEntries(entries.filter(e => e._id !== optimisticEntry._id));
         throw new Error(errorData.error || "Failed to save entry");
       }
 
       const newEntry = await res.json();
-      setEntries([newEntry, ...entries]);
-      setText("");
+      // Replace optimistic entry with real entry
+      setEntries(current =>
+        current.map(e => e._id === optimisticEntry._id ? newEntry : e)
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error saving entry";
       console.error("Error saving:", error);
       setError(message);
-    } finally {
       setLoading(false);
     }
   };

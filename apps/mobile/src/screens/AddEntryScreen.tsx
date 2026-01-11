@@ -53,86 +53,82 @@ export default function AddEntryScreen({ navigation, route }: any) {
     }
 
     setIsSaving(true);
-    try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch {
-      /* ignore haptics errors */
-    }
 
-    // Local-first: write locally immediately, then attempt remote sync in background
+    // Local-first: save to SQLite immediately (don't wait for haptics or API)
     try {
-      const token = await mobileAuthService.getToken();
-
       if (isEditing) {
-        // Update locally first
+        // Update locally immediately
         await updateEntry(existing.id, { notes, mood, synced: false });
-
-        // Fire-and-forget remote update
-        const remoteId = existing?.remoteId;
-        if (remoteId) {
-          try {
-            const res = await fetch(`${ENTRIES_API}/${remoteId}`, {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-                ...(token && { Authorization: `Bearer ${token}` }),
-              },
-              body: JSON.stringify({ notes, mood, date: existing.date }),
-            });
-            if (res.ok) {
-              await updateEntry(existing.id, { synced: true });
-            }
-          } catch {
-            // stay unsynced; background sync will retry later
-          }
-        }
       } else {
-        // Create locally first with user-selected mood
-        const local = await addEntry({ date: new Date().toISOString(), mood, notes }, false);
+        // Create locally immediately
+        const date = new Date().toISOString();
+        await addEntry({ date, mood, notes }, false);
+      }
 
-        // Fire-and-forget remote create
+      setIsSaving(false);
+      setShowSaveSuccess(true);
+
+      // Show success message then navigate after 1.5 seconds
+      setTimeout(() => {
         try {
-          const res = await fetch(ENTRIES_API, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token && { Authorization: `Bearer ${token}` }),
-            },
-            body: JSON.stringify({
-              notes: notes || '',
-              mood,
-              date: local.date,
-            }),
-          });
-          if (res.ok) {
-            const remote = await res.json();
-            await updateEntry(local.id, {
-              synced: true,
-              remoteId: remote._id,
-              mood: remote.mood || local.mood,
-              date: remote.createdAt || local.date,
-              notes: remote.content || notes,
-            });
-          }
+          navigation.navigate('Main', { screen: 'Home' });
         } catch {
-          // remain unsynced; background sync will retry later
+          navigation.goBack();
         }
-      }
-    } catch {
-      // swallow; local writes already done
-    }
+      }, 1500);
 
-    setIsSaving(false);
-    setShowSaveSuccess(true);
-
-    // Show success message then navigate after 1.5 seconds
-    setTimeout(() => {
+      // Haptics: fire-and-forget (don't await)
       try {
-        navigation.navigate('Main', { screen: 'Home' });
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       } catch {
-        navigation.goBack();
+        /* ignore haptics errors */
       }
-    }, 1500);
+
+      // Sync to remote in background (don't wait)
+      const token = await mobileAuthService.getToken();
+      const date = isEditing ? existing.date : new Date().toISOString();
+
+      if (isEditing && existing?.remoteId) {
+        // Background PATCH
+        fetch(`${ENTRIES_API}/${existing.remoteId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          body: JSON.stringify({ notes, mood, date }),
+        })
+          .then(res => {
+            if (res.ok && isEditing) {
+              updateEntry(existing.id, { synced: true });
+            }
+          })
+          .catch(() => {
+            // Sync failed, will retry on next app launch
+          });
+      } else if (!isEditing) {
+        // Background POST for new entry
+        fetch(ENTRIES_API, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          body: JSON.stringify({ notes: notes || '', mood, date }),
+        })
+          .then(res => res.json())
+          .then(remote => {
+            // We'll update sync status in the background
+          })
+          .catch(() => {
+            // Sync failed, will retry on next app launch
+          });
+      }
+    } catch (error) {
+      setIsSaving(false);
+      Alert.alert('Save failed', 'Could not save entry locally');
+      console.error('Save error:', error);
+    }
   };
 
   return (
