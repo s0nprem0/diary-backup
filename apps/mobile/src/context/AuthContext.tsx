@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { mobileAuthService } from '../services/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -9,6 +10,8 @@ interface AuthContextType {
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const AUTH_TOKEN_KEY = 'mood_diary_auth_token';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -21,10 +24,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuthStatus = async () => {
     try {
-      const authenticated = await mobileAuthService.isAuthenticated();
-      setIsAuthenticated(authenticated);
+      // Try to get token from AsyncStorage first (migration)
+      let token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+
+      if (token) {
+        // Token exists in AsyncStorage, keep it for now
+        setIsAuthenticated(true);
+      } else {
+        // No token found
+        setIsAuthenticated(false);
+      }
     } catch (error) {
       console.error('Failed to check auth status:', error);
+      setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }

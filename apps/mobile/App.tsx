@@ -14,6 +14,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { mobileAuthService } from './src/services/authService';
 import { lightTheme, darkTheme } from './src/theme';
 import { syncPendingEntries } from './src/services/entriesService';
+import { SQLiteService } from './src/services/sqliteService';
 import { ENTRIES_API } from './config';
 
 // helper to post a local entry to the server
@@ -60,12 +61,15 @@ function AppNavigator() {
   useEffect(() => {
     (async () => {
       try {
+        // Initialize SQLite first
+        await SQLiteService.init();
+
         const v = await AsyncStorage.getItem(THEME_KEY);
         setIsDark(v === '1');
         const onboarded = await AsyncStorage.getItem(ONBOARDING_KEY);
         setHasOnboarded(onboarded === '1');
       } catch (e) {
-        // ignore
+        console.error('Error initializing app:', e);
       }
       // attempt to sync any pending entries when the app starts
       try {
