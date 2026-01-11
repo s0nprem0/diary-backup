@@ -15,7 +15,7 @@ interface Entry {
   createdAt: string;
 }
 
-export default function HomeScreen({ navigation }: any) {
+export default function HomeScreen() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,7 +45,7 @@ export default function HomeScreen({ navigation }: any) {
       setFetching(false);
       setRefreshing(false);
     }
-  }, [navigation]);
+  }, []);
 
   useEffect(() => {
     fetchEntries();
@@ -86,9 +86,7 @@ export default function HomeScreen({ navigation }: any) {
     }
   };
 
-  const handleLogout = async () => {
-    // auth removed — no-op
-  };
+  // auth removed — logout removed
 
   const getMoodColor = (mood: string) => {
     switch (mood) {
@@ -120,9 +118,6 @@ export default function HomeScreen({ navigation }: any) {
       >
         <View style={styles.header}>
           <Text style={styles.title}>📘 Mood Diary</Text>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
         </View>
 
         {fetching && !refreshing ? (
@@ -180,8 +175,8 @@ const styles = StyleSheet.create({
     zIndex: 10
   },
   title: { fontSize: 24, fontWeight: '800', letterSpacing: 0.5 },
-  logoutButton: { position: 'absolute', right: 20, top: 65 },
-  logoutText: { color: '#ef4444', fontWeight: '600', fontSize: 14 },
+
+
 
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
