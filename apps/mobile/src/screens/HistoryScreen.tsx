@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View, Alert } from 'react-native';
+import { ScrollView, View, Alert } from 'react-native';
 import { Text } from 'react-native-paper';
 import { getEntries, deleteEntry } from '../services/entriesService';
 import EntryCard from '../components/EntryCard';
@@ -40,4 +40,4 @@ export default function HistoryScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({});
+

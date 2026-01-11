@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { Text } from 'react-native-paper';
 import { getEntries } from '../services/entriesService';
 
@@ -45,4 +45,4 @@ export default function InsightsScreen() {
   );
 }
 
-const styles = StyleSheet.create({});
+

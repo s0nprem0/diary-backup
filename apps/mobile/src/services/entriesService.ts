@@ -77,7 +77,6 @@ export const syncPendingEntries = async (postFn: (entry: Entry) => Promise<{ ok:
       }
     } catch (err) {
       // ignore and continue with next
-      console.log('sync error', err);
     }
   }
 

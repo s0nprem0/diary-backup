@@ -28,6 +28,7 @@ const postEntryToServer = async (entry: any) => {
 };
 
 export type RootStackParamList = {
+  Main: undefined;
   Home: undefined;
   AddEntry: undefined;
   History: undefined;
