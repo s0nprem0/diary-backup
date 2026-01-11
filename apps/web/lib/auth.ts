@@ -10,6 +10,7 @@ export const authService = {
     if (password === AUTH_PASSWORD) {
       const token = btoa(`token_${Date.now()}`); // Simple token
       if (typeof window !== "undefined") {
+        localStorage.setItem(AUTH_TOKEN_KEY, token);
       }
       return true;
     }

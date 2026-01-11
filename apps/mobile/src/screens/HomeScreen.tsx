@@ -33,7 +33,11 @@ export default function HomeScreen({ navigation }: any) {
                   'Content-Type': 'application/json',
                   ...(token && { Authorization: `Bearer ${token}` }),
                 },
-                body: JSON.stringify({ content: entry.notes || '', mood: entry.mood }),
+                body: JSON.stringify({
+                  notes: entry.notes || '',
+                  mood: entry.mood,
+                  date: entry.date,
+                }),
               });
               return { ok: res.ok, data: res.ok ? await res.json() : undefined };
             } else {
@@ -43,7 +47,11 @@ export default function HomeScreen({ navigation }: any) {
                   'Content-Type': 'application/json',
                   ...(token && { Authorization: `Bearer ${token}` }),
                 },
-                body: JSON.stringify({ content: entry.notes || '', mood: entry.mood }),
+                body: JSON.stringify({
+                  notes: entry.notes || '',
+                  mood: entry.mood,
+                  date: entry.date,
+                }),
               });
               return { ok: res.ok, data: res.ok ? await res.json() : undefined };
             }

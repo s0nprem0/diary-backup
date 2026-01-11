@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthProvider";
 import { authService } from "@/lib/auth";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 interface Entry {
   _id: string;
   content: string;
@@ -16,38 +18,78 @@ export default function Home() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const fetchEntries = async () => {
+    try {
+      const res = await fetch(`${API_URL}/entries`);
+      if (!res.ok) throw new Error("Failed to fetch entries");
+      const data = await res.json();
+      setEntries(data);
+    } catch (err) {
+      console.error("Failed to fetch entries:", err);
+      setError("Failed to load entries");
+    }
+  };
 
   useEffect(() => {
-    // Fetch entries - auth is done locally, but we can add token for future backend validation
-    fetch("http://localhost:3001/entries")
-      .then((res) => res.json())
-      .then((data) => setEntries(data))
-      .catch((err) => console.error("Failed to fetch entries:", err));
+    fetchEntries();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
     setLoading(true);
+    setError("");
 
     try {
       const token = authService.getToken();
-      const res = await fetch("http://localhost:3001/entries", {
+      const res = await fetch(`${API_URL}/entries`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token && { Authorization: `Bearer ${token}` }),
         },
-        body: JSON.stringify({ content: text }),
+        body: JSON.stringify({
+          content: text,
+          date: new Date().toISOString(),
+        }),
       });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to save entry");
+      }
 
       const newEntry = await res.json();
       setEntries([newEntry, ...entries]);
       setText("");
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Error saving entry";
       console.error("Error saving:", error);
+      setError(message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this entry?")) return;
+
+    try {
+      const token = authService.getToken();
+      const res = await fetch(`${API_URL}/entries/${id}`, {
+        method: "DELETE",
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      });
+
+      if (!res.ok) throw new Error("Failed to delete entry");
+      setEntries(entries.filter((e) => e._id !== id));
+    } catch (error) {
+      console.error("Error deleting:", error);
+      setError("Failed to delete entry");
     }
   };
 
@@ -55,9 +97,10 @@ export default function Home() {
   const getMoodColor = (mood: string) => {
     switch (mood) {
       case "Happy": return "bg-green-100 border-green-300";
-      case "Good": return "bg-blue-100 border-blue-300";
+      case "Excited": return "bg-yellow-100 border-yellow-300";
       case "Sad": return "bg-pink-100 border-pink-300";
-      case "Bad": return "bg-red-100 border-red-300";
+      case "Anxious": return "bg-orange-100 border-orange-300";
+      case "Tired": return "bg-purple-100 border-purple-300";
       default: return "bg-gray-100 border-gray-300";
     }
   };
@@ -74,6 +117,12 @@ export default function Home() {
         </button>
       </div>
 
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 border border-red-300 rounded-lg text-red-700">
+          {error}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="mb-8 gap-4 flex flex-col">
         <textarea
           className="w-full p-4 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 outline-none text-black"
@@ -81,9 +130,10 @@ export default function Home() {
           placeholder="How was your day?"
           value={text}
           onChange={(e) => setText(e.target.value)}
+          disabled={loading}
         />
         <button
-          disabled={loading}
+          disabled={loading || !text.trim()}
           className="bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors"
         >
           {loading ? "Analyzing..." : "Save Entry"}
@@ -98,9 +148,17 @@ export default function Home() {
           >
             <div className="flex justify-between items-center mb-2">
               <span className="font-bold text-lg text-gray-800">{entry.mood}</span>
-              <span className="text-sm text-gray-500">
-                {new Date(entry.createdAt).toLocaleDateString()}
-              </span>
+              <div className="flex gap-2">
+                <span className="text-sm text-gray-500">
+                  {new Date(entry.createdAt).toLocaleDateString()}
+                </span>
+                <button
+                  onClick={() => handleDelete(entry._id)}
+                  className="text-sm bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
             <p className="text-gray-700">{entry.content}</p>
           </div>

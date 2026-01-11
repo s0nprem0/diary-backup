@@ -77,7 +77,7 @@ export default function AddEntryScreen({ navigation, route }: any) {
                 'Content-Type': 'application/json',
                 ...(token && { Authorization: `Bearer ${token}` }),
               },
-              body: JSON.stringify({ content: notes, mood }),
+              body: JSON.stringify({ notes, mood, date: existing.date }),
             });
             if (res.ok) {
               await updateEntry(existing.id, { synced: true });
@@ -98,13 +98,17 @@ export default function AddEntryScreen({ navigation, route }: any) {
               'Content-Type': 'application/json',
               ...(token && { Authorization: `Bearer ${token}` }),
             },
-            body: JSON.stringify({ content: notes || '', mood }),
+            body: JSON.stringify({
+              notes: notes || '',
+              mood,
+              date: local.date,
+            }),
           });
           if (res.ok) {
             const remote = await res.json();
             await updateEntry(local.id, {
               synced: true,
-              remoteId: remote.id || remote._id,
+              remoteId: remote._id,
               mood: remote.mood || local.mood,
               date: remote.createdAt || local.date,
               notes: remote.content || notes,

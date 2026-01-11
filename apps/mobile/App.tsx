@@ -26,7 +26,7 @@ const postEntryToServer = async (entry: any) => {
         'Content-Type': 'application/json',
         ...(token && { Authorization: `Bearer ${token}` }),
       },
-      body: JSON.stringify({ content: entry.notes || '', date: entry.date, mood: entry.mood }),
+      body: JSON.stringify({ notes: entry.notes || '', date: entry.date, mood: entry.mood }),
     });
     const data = await res.json();
     return { ok: res.ok, data };
