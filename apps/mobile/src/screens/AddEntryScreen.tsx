@@ -18,11 +18,14 @@ export default function AddEntryScreen({ navigation, route }: any) {
       /* ignore haptics errors */
     }
 
+    // Local-first: write locally immediately, then attempt remote sync in background
     try {
       if (isEditing) {
-        // Attempt to update remote if we have a remoteId
+        // Update locally first
+        await updateEntry(existing.id || existing._id, { notes, synced: false });
+
+        // Fire-and-forget remote update
         const remoteId = existing?.remoteId;
-        let remoteOk = false;
         if (remoteId) {
           try {
             const res = await fetch(`${ENTRIES_API}/${remoteId}`, {
@@ -30,45 +33,40 @@ export default function AddEntryScreen({ navigation, route }: any) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ content: notes }),
             });
-            remoteOk = res.ok;
-          } catch (e) {
-            remoteOk = false;
+            if (res.ok) {
+              await updateEntry(existing.id || existing._id, { synced: true });
+            }
+          } catch {
+            // stay unsynced; background sync will retry later
           }
         }
-
-        // Update local entry; if remote update failed mark as not synced
-        await updateEntry(existing.id || existing._id, { notes, synced: !!remoteOk });
       } else {
-        // create new entry (same flow as before)
-        const res = await fetch(ENTRIES_API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: notes || '' }),
-        });
+        // Create locally first
+        const local = await addEntry({ date: new Date().toISOString(), mood: 'Unknown', notes }, false);
 
-        if (res.ok) {
-          const remote = await res.json();
-          await addEntry(
-            {
-              date: remote.createdAt || new Date().toISOString(),
-              mood: remote.mood || 'Neutral',
+        // Fire-and-forget remote create
+        try {
+          const res = await fetch(ENTRIES_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: notes || '' }),
+          });
+          if (res.ok) {
+            const remote = await res.json();
+            await updateEntry(local.id, {
+              synced: true,
+              remoteId: remote.id || remote._id,
+              mood: remote.mood || local.mood,
+              date: remote.createdAt || local.date,
               notes: remote.content || notes,
-            },
-            true,
-            remote.id || remote._id,
-          );
-        } else {
-          // fallback: save locally (not synced)
-          await addEntry({ date: new Date().toISOString(), mood: 'Unknown', notes }, false);
+            });
+          }
+        } catch {
+          // remain unsynced; background sync will retry later
         }
       }
-    } catch (e) {
-      // network error -> save locally (not synced) or mark not synced
-      if (isEditing) {
-        await updateEntry(existing.id || existing._id, { notes, synced: false });
-      } else {
-        await addEntry({ date: new Date().toISOString(), mood: 'Unknown', notes }, false);
-      }
+    } catch {
+      // swallow; local writes already done
     }
 
     // Navigate back to the Home tab inside the Main stack.

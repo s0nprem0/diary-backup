@@ -50,9 +50,19 @@ Installation
 3. Set up environment variables:
    1. Create a `.env` file in the root directory.
    2. Add the following variables:
-      1. `MONGODB_URI`: Your MongoDB connection string.
-      2. `PORT`: Port number for the backend server (default: 4000).
+      1. `MONGO_URI`: Your MongoDB connection string.
+      2. `PORT`: Port number for the backend server (default: 3001).
 4. Start the app:
     ```bash
     bun run dev
     ```
+
+## 📱 Local-First Mobile Behavior
+
+- **Offline-first writes**: The mobile app stores entries locally immediately using AsyncStorage, ensuring no data loss when offline.
+- **Background sync**: On returning to the Home screen, the app attempts to sync unsynced entries to the API. New entries use `POST /entries`; edited entries use `PATCH /entries/:id` if a `remoteId` exists.
+- **Conflict handling**: The API schema includes `updatedAt` timestamps. The simple strategy used is last-write-wins based on server updates; mobile keeps a `synced` flag per entry.
+- **Endpoints**:
+  `GET /entries` — list entries
+  `POST /entries` — create entry from content, auto mood analysis
+  `PATCH /entries/:id` — update content and re-analyze mood

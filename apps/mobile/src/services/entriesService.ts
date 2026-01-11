@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
+import { listEntries, insertEntry, patchEntry, removeEntry, listPendingEntries } from '../storage/db';
 
 export interface Entry {
   id: string;
@@ -11,49 +11,64 @@ export interface Entry {
   remoteId?: string; // optional server id
 }
 
-const STORAGE_KEY = 'MOOD_ENTRIES_V1';
+// Generate simple unique ids without external deps
+const genId = () => `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
 
 export const getEntries = async (): Promise<Entry[]> => {
-  const raw = await AsyncStorage.getItem(STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw) as Entry[];
-  } catch (e) {
-    return [];
-  }
+  const rows = await listEntries();
+  return rows.map((r) => ({
+    id: r.id,
+    date: r.date,
+    mood: r.mood,
+    notes: r.notes ?? undefined,
+    synced: !!r.synced,
+    remoteId: r.remoteId ?? undefined,
+  }));
 };
 
-export const saveEntries = async (entries: Entry[]) => {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-};
+// Deprecated: persisted via SQLite now
+export const saveEntries = async (_entries: Entry[]) => {};
 
 export const addEntry = async (entry: Omit<Entry, 'id' | 'synced' | 'remoteId'>, synced = false, remoteId?: string) => {
-  const entries = await getEntries();
-  const newEntry: Entry = { ...entry, id: Date.now().toString(), synced, remoteId };
-  entries.unshift(newEntry);
-  await saveEntries(entries);
+  const newEntry: Entry = { ...entry, id: genId(), synced, remoteId };
+  await insertEntry({
+    id: newEntry.id,
+    date: newEntry.date,
+    mood: newEntry.mood,
+    notes: newEntry.notes ?? null,
+    synced: newEntry.synced ? 1 : 0,
+    remoteId: newEntry.remoteId ?? null,
+  });
   return newEntry;
 };
 
 export const updateEntry = async (id: string, patch: Partial<Entry>) => {
+  await patchEntry(id, {
+    date: patch.date,
+    mood: patch.mood,
+    notes: patch.notes,
+    synced: patch.synced === undefined ? undefined : patch.synced ? 1 : 0,
+    remoteId: patch.remoteId,
+  });
   const entries = await getEntries();
-  const idx = entries.findIndex((e) => e.id === id);
-  if (idx === -1) return null;
-  entries[idx] = { ...entries[idx], ...patch };
-  await saveEntries(entries);
-  return entries[idx];
+  return entries.find((e) => e.id === id) ?? null;
 };
 
 export const deleteEntry = async (id: string) => {
-  let entries = await getEntries();
-  entries = entries.filter((e) => e.id !== id);
-  await saveEntries(entries);
+  await removeEntry(id);
 };
 
 // Return entries that are not yet synced to the server
 export const getPendingEntries = async (): Promise<Entry[]> => {
-  const entries = await getEntries();
-  return entries.filter((e) => !e.synced);
+  const rows = await listPendingEntries();
+  return rows.map((r) => ({
+    id: r.id,
+    date: r.date,
+    mood: r.mood,
+    notes: r.notes ?? undefined,
+    synced: !!r.synced,
+    remoteId: r.remoteId ?? undefined,
+  }));
 };
 
 // Try to sync pending entries to the given API endpoint. The caller should provide the
@@ -62,17 +77,15 @@ export const syncPendingEntries = async (postFn: (entry: Entry) => Promise<{ ok:
   const state = await NetInfo.fetch();
   if (!state.isConnected) return { synced: 0 };
 
-  const entries = await getEntries();
+  const pending = await getPendingEntries();
   let syncedCount = 0;
 
-  for (let i = entries.length - 1; i >= 0; i--) {
-    const e = entries[i];
-    if (e.synced) continue;
+  for (let i = pending.length - 1; i >= 0; i--) {
+    const e = pending[i];
     try {
       const res = await postFn(e);
       if (res.ok) {
-        // mark as synced and (optionally) store remote id
-        entries[i] = { ...e, synced: true, remoteId: res.data?.id || res.data?._id || e.remoteId };
+        await updateEntry(e.id, { synced: true, remoteId: res.data?.id || res.data?._id || e.remoteId });
         syncedCount++;
       }
     } catch (err) {
@@ -80,6 +93,5 @@ export const syncPendingEntries = async (postFn: (entry: Entry) => Promise<{ ok:
     }
   }
 
-  if (syncedCount > 0) await saveEntries(entries);
   return { synced: syncedCount };
 };

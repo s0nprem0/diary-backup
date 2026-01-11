@@ -60,6 +60,38 @@ app.post("/entries", async (req, res) => {
   }
 });
 
+// 5. Update Entry content (public)
+app.patch("/entries/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+
+    if (!content) {
+      res.status(400).json({ error: "Content is required" });
+      return;
+    }
+
+    // Re-analyze mood for updated content
+    const { mood, score } = analyzeEmotion(content);
+
+    const updated = await Entry.findByIdAndUpdate(
+      id,
+      { content, mood, sentimentScore: score },
+      { new: true }
+    );
+
+    if (!updated) {
+      res.status(404).json({ error: "Entry not found" });
+      return;
+    }
+
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating entry:", error);
+    res.status(500).json({ error: "Failed to update entry" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`✅ API running on http://localhost:${PORT}`);
 });

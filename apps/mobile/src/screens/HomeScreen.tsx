@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { FAB, Text, Button, useTheme } from 'react-native-paper';
-import { getEntries, deleteEntry } from '../services/entriesService';
+import { getEntries, deleteEntry, syncPendingEntries, Entry as LocalEntry } from '../services/entriesService';
+import { ENTRIES_API } from '../../config';
 import EntryCard from '../components/EntryCard';
 
 export default function HomeScreen({ navigation }: any) {
@@ -13,7 +14,38 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   useEffect(() => {
-    const unsub = navigation.addListener('focus', load);
+    const unsub = navigation.addListener('focus', async () => {
+      await load();
+      // Attempt background sync of pending entries whenever returning to Home
+      try {
+        await syncPendingEntries(async (entry: LocalEntry) => {
+          // If entry has a remoteId, try to patch; else create
+          try {
+            if (entry.remoteId) {
+              const res = await fetch(`${ENTRIES_API}/${entry.remoteId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: entry.notes || '' }),
+              });
+              return { ok: res.ok, data: res.ok ? await res.json() : undefined };
+            } else {
+              const res = await fetch(ENTRIES_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: entry.notes || '' }),
+              });
+              return { ok: res.ok, data: res.ok ? await res.json() : undefined };
+            }
+          } catch (e) {
+            return { ok: false };
+          }
+        });
+        // reload to reflect any synced status updates
+        await load();
+      } catch {
+        // ignore sync errors
+      }
+    });
     load();
     return unsub;
   }, [navigation]);
