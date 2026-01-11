@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Alert } from 'react-native';
+import { View, ScrollView, Alert, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Switch, Text, Button, useTheme, Card, Divider } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getReminderTime, isReminderEnabled, setDailyReminder, disableReminders, formatReminderTime } from '../services/reminders';
+import { getReminderTime, isReminderEnabled, setDailyReminder, disableReminders, formatReminderTime, requestNotificationPermissions } from '../services/reminders';
 import { useAuth } from '../context/AuthContext';
+import { getEntries } from '../services/entriesService';
 
 const THEME_KEY = 'APP_THEME_DARK';
 
@@ -55,15 +56,61 @@ export default function SettingsScreen({ setIsDark, isDark: propIsDark }: { setI
   };
 
   const setReminderAndRefresh = async (hour: number, minute: number) => {
-    await setDailyReminder(hour, minute);
-    setReminderTime({ hour, minute });
-    setReminderEnabled(true);
+    const success = await setDailyReminder(hour, minute);
+    if (success) {
+      setReminderTime({ hour, minute });
+      setReminderEnabled(true);
+      Alert.alert('✅ Reminder Set', `You'll receive a daily notification at ${formatReminderTime(hour, minute)}`);
+    } else {
+      Alert.alert(
+        'Permission Required',
+        'Please enable notifications in your device settings to receive reminders.',
+        [
+          { text: 'OK', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => requestNotificationPermissions() }
+        ]
+      );
+    }
   };
 
   const handleDisableReminder = async () => {
     await disableReminders();
     setReminderEnabled(false);
     setReminderTime(null);
+  };
+
+  const handleExportData = async () => {
+    try {
+      const entries = await getEntries();
+
+      if (entries.length === 0) {
+        Alert.alert('No Data', 'You have no entries to export.');
+        return;
+      }
+
+      // Create JSON export
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        appVersion: '1.0.0',
+        totalEntries: entries.length,
+        entries: entries.map(entry => ({
+          date: entry.date,
+          mood: entry.mood,
+          notes: entry.notes,
+        })),
+      };
+
+      const jsonString = JSON.stringify(exportData, null, 2);
+
+      // Share the data
+      await Share.share({
+        message: jsonString,
+        title: 'Mood Diary Export',
+      });
+    } catch (error) {
+      console.error('Export failed:', error);
+      Alert.alert('Export Failed', 'Could not export your data. Please try again.');
+    }
   };
 
   return (
@@ -132,6 +179,30 @@ export default function SettingsScreen({ setIsDark, isDark: propIsDark }: { setI
         <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 12, lineHeight: 20 }}>
           Mood Diary helps you track your emotional well-being over time. All entries are stored locally on your device.
         </Text>
+      </View>
+
+      {/* Data Management Section */}
+      <View style={{ marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.outlineVariant }}>
+        <Text variant="labelMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
+          Data Management
+        </Text>
+        <Card style={{ marginBottom: 12 }}>
+          <Card.Content>
+            <Text variant="titleMedium" style={{ marginBottom: 8, color: colors.onSurface }}>
+              Export Your Data
+            </Text>
+            <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
+              Download all your diary entries as JSON format for backup or analysis.
+            </Text>
+            <Button
+              mode="outlined"
+              onPress={handleExportData}
+              icon="download"
+            >
+              Export Data
+            </Button>
+          </Card.Content>
+        </Card>
       </View>
 
         {/* Security Section */}

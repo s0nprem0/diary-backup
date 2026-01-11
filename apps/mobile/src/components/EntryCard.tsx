@@ -11,12 +11,37 @@ export default function EntryCard({ entry, onEdit, onDelete }: { entry: any; onE
   useEffect(() => {
     fadeIn();
   }, []);
+
+  // Format date with time
   const formattedDate = new Date(entry.date).toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
+    year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
   });
+
+  // Show relative time if recent (Today/Yesterday)
+  const getRelativeDate = () => {
+    const entryDate = new Date(entry.date);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const entryDateOnly = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+
+    const timeString = entryDate.toLocaleString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+
+    if (entryDateOnly.getTime() === today.getTime()) {
+      return `Today at ${timeString}`;
+    } else if (entryDateOnly.getTime() === yesterday.getTime()) {
+      return `Yesterday at ${timeString}`;
+    }
+    return formattedDate;
+  };
 
   return (
     <Animated.View style={{ opacity: fadeAnim }}>
@@ -30,7 +55,7 @@ export default function EntryCard({ entry, onEdit, onDelete }: { entry: any; onE
         </View>
 
         {/* Date */}
-        <Text style={[styles.date, { color: colors.onSurfaceVariant }]}>{formattedDate}</Text>
+        <Text style={[styles.date, { color: colors.onSurfaceVariant }]}>{getRelativeDate()}</Text>
 
         {/* Notes */}
         <Text style={[styles.notes, { color: colors.onSurface }]} numberOfLines={3}>
