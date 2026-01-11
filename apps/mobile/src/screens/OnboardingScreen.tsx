@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, Dimensions, Animated } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, Button, useTheme } from 'react-native-paper';
 
 const { width } = Dimensions.get('window');
@@ -63,7 +64,7 @@ export default function OnboardingScreen({ onComplete }: { onComplete: () => voi
   const progress = ((currentSlide + 1) / SLIDES.length) * 100;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>
           {currentSlide + 1} / {SLIDES.length}
@@ -114,13 +115,10 @@ export default function OnboardingScreen({ onComplete }: { onComplete: () => voi
           {SLIDES.map((_, idx) => (
             <View
               key={idx}
-              style={[
-                styles.dot,
-                {
-                  backgroundColor:
-                    idx === currentSlide ? colors.primary : colors.outlineVariant,
-                },
-              ]}
+              style={{
+                ...styles.dot,
+                backgroundColor: idx === currentSlide ? colors.primary : colors.outlineVariant,
+              }}
             />
           ))}
         </View>
@@ -134,7 +132,7 @@ export default function OnboardingScreen({ onComplete }: { onComplete: () => voi
           {currentSlide === SLIDES.length - 1 ? 'Get Started' : 'Next'}
         </Button>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Switch, Text, Button, useTheme, Card, Divider } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getReminderTime, isReminderEnabled, setDailyReminder, disableReminders, formatReminderTime } from '../services/reminders';
@@ -66,10 +67,11 @@ export default function SettingsScreen({ setIsDark, isDark: propIsDark }: { setI
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-      <Text variant="headlineSmall" style={{ marginBottom: 20, color: colors.onSurface }}>
-        Settings
-      </Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+        <Text variant="headlineSmall" style={{ marginBottom: 20, color: colors.onSurface }}>
+          Settings
+        </Text>
 
       {/* Theme Section */}
       <Card style={{ marginBottom: 16 }}>
@@ -132,31 +134,32 @@ export default function SettingsScreen({ setIsDark, isDark: propIsDark }: { setI
         </Text>
       </View>
 
-      {/* Security Section */}
-      <View style={{ marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.outlineVariant }}>
-        <Text variant="labelMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
-          Security
-        </Text>
-        <Button
-          mode="outlined"
-          onPress={() => {
-            Alert.alert('Logout', 'Are you sure you want to logout? You will need to enter your password again.', [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Logout',
-                onPress: async () => {
-                  await logout();
+        {/* Security Section */}
+        <View style={{ marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.outlineVariant }}>
+          <Text variant="labelMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
+            Security
+          </Text>
+          <Button
+            mode="outlined"
+            onPress={() => {
+              Alert.alert('Logout', 'Are you sure you want to logout? You will need to enter your password again.', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Logout',
+                  onPress: async () => {
+                    await logout();
+                  },
+                  style: 'destructive',
                 },
-                style: 'destructive',
-              },
-            ]);
-          }}
-          icon="logout"
-          textColor={colors.error}
-        >
-          Logout
-        </Button>
-      </View>
-    </ScrollView>
+              ]);
+            }}
+            icon="logout"
+            textColor={colors.error}
+          >
+            Logout
+          </Button>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

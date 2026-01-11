@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTheme } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import HomeScreen from '../screens/HomeScreen';
@@ -14,6 +15,7 @@ const Tab = createBottomTabNavigator();
 
 export default function BottomTabs({ isDark, setIsDark }: Props) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const renderIcon = (routeName: string, color: string, size: number) => {
     const map: Record<string, string> = {
@@ -33,9 +35,16 @@ export default function BottomTabs({ isDark, setIsDark }: Props) {
       screenOptions={({ route }: any) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.onSurface,
-        tabBarStyle: { backgroundColor: colors.surface },
-        tabBarIcon: ({ color, size }) => renderIcon(route.name, color, size),
+        // use onSurfaceVariant for slightly reduced contrast on inactive labels
+        tabBarInactiveTintColor: colors.onSurfaceVariant || colors.onSurface,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          height: 60 + insets.bottom,
+          paddingBottom: Math.max(8, insets.bottom),
+          paddingTop: 6,
+        },
+        tabBarLabelStyle: { fontSize: 12 },
+        tabBarIcon: ({ color, size = 22 }) => renderIcon(route.name, color, size),
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, View, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, useTheme, Searchbar, Chip, Button } from 'react-native-paper';
 import { getEntries, deleteEntry } from '../services/entriesService';
 import { MOOD_OPTIONS, getMoodEmoji } from '../services/moodUtils';
@@ -106,10 +107,11 @@ export default function HistoryScreen({ navigation }: any) {
   const allEntriesCount = entries.length;
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-      <Text variant="headlineMedium" style={{ marginBottom: 16 }}>
-        History
-      </Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+        <Text variant="headlineMedium" style={{ marginBottom: 16 }}>
+          History
+        </Text>
 
       {isLoading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 32 }}>
@@ -130,13 +132,13 @@ export default function HistoryScreen({ navigation }: any) {
             <Text variant="labelLarge" style={{ marginBottom: 8, color: colors.onSurface }}>
               Filter by mood
             </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
               {selectedMoodFilter && (
                 <Chip
                   mode="flat"
                   onPress={() => setSelectedMoodFilter(null)}
                   selected={true}
-                  style={{ backgroundColor: colors.primary }}
+                  style={{ backgroundColor: colors.primary, marginRight: 8, marginBottom: 8 }}
                   textStyle={{ color: colors.onPrimary }}
                 >
                   Clear filter ✕
@@ -150,6 +152,8 @@ export default function HistoryScreen({ navigation }: any) {
                   onPress={() => setSelectedMoodFilter(selectedMoodFilter === mood ? null : mood)}
                   style={{
                     backgroundColor: selectedMoodFilter === mood ? colors.primary : 'transparent',
+                    marginRight: 8,
+                    marginBottom: 8,
                   }}
                   textStyle={{
                     color: selectedMoodFilter === mood ? colors.onPrimary : colors.onSurface,
@@ -237,7 +241,8 @@ export default function HistoryScreen({ navigation }: any) {
           </Button>
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

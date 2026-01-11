@@ -13,6 +13,11 @@ export const lightTheme = {
     error: '#B00020',
     onPrimary: '#FFFFFF',
     onSurface: '#1f2937',
+    // added commonly-used MD tokens to avoid undefined lookups across the app
+    surfaceVariant: '#F3F4F6',
+    onSurfaceVariant: '#6B7280',
+    outline: '#E5E7EB',
+    outlineVariant: '#E5E7EB',
   },
   // subtle typography adjustments
   fonts: DefaultTheme.fonts,
@@ -25,6 +30,8 @@ export const darkTheme = {
     primary: '#8EA8FF',
     secondary: '#5AA9FF',
     background: '#0F172A',
+    surfaceVariant: '#0B1220',
+    onSurfaceVariant: '#9CA3AF',
   },
 };
 

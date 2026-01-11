@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, TextInput, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Text, useTheme, Snackbar } from 'react-native-paper';
 import { addEntry, updateEntry } from '../services/entriesService';
 import { inferMood } from '../services/mood';
@@ -118,7 +119,7 @@ export default function AddEntryScreen({ navigation, route }: any) {
   };
 
   return (
-    <>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
           <Text variant="headlineSmall" style={{ marginBottom: 16 }}>
@@ -196,6 +197,6 @@ export default function AddEntryScreen({ navigation, route }: any) {
       >
         ✓ Entry saved successfully
       </Snackbar>
-    </>
+    </SafeAreaView>
   );
 }

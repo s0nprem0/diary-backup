@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, TextInput, Button, useTheme } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
 
@@ -55,12 +56,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={[styles.container, { backgroundColor: colors.background }]}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.content}>
           <Text style={[styles.emoji, { color: colors.primary }]}>🔐</Text>
 
           <Text style={[styles.title, { color: colors.onBackground }]}>
@@ -131,12 +133,13 @@ export default function LoginScreen() {
               : 'Unlock Diary'}
           </Button>
 
-          <Text style={[styles.info, { color: colors.onSurfaceVariant }]}>
-            All entries are stored locally and remain private
-          </Text>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <Text style={[styles.info, { color: colors.onSurfaceVariant }]}>
+              All entries are stored locally and remain private
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -165,7 +168,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 20,
@@ -182,10 +185,10 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
     marginBottom: 24,
-    paddingVertical: 4,
+    paddingVertical: 10,
   },
   info: {
-    fontSize: 11,
+    fontSize: 13,
     textAlign: 'center',
     marginTop: 16,
   },

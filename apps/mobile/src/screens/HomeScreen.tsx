@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FAB, Text, Button, useTheme } from 'react-native-paper';
 import NetInfo from '@react-native-community/netinfo';
 import { getEntries, deleteEntry, Entry as LocalEntry } from '../services/entriesService';
@@ -57,7 +58,7 @@ export default function HomeScreen({ navigation }: any) {
   const allEntriesCount = entries.length;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       {/* Offline Indicator */}
       {!isConnected && (
         <View style={[styles.offlineBanner, { backgroundColor: colors.onSurfaceVariant }]}>
@@ -109,13 +110,13 @@ export default function HomeScreen({ navigation }: any) {
         style={styles.fab}
         accessibilityLabel="Add entry"
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  fab: { position: 'absolute', right: 16, bottom: 24 },
+  fab: { position: 'absolute', right: 16, bottom: 88 },
   emptyState: {
     borderRadius: 12,
     padding: 32,

@@ -42,7 +42,7 @@ export default function EntryCard({ entry, onEdit, onDelete }: { entry: any; onE
           {onEdit && (
             <IconButton
               icon="pencil"
-              size={18}
+              size={24}
               onPress={() => onEdit(entry)}
               accessibilityLabel="Edit entry"
             />
@@ -50,7 +50,7 @@ export default function EntryCard({ entry, onEdit, onDelete }: { entry: any; onE
           {onDelete && (
             <IconButton
               icon="delete"
-              size={18}
+              size={24}
               onPress={() => onDelete(entry.id)}
               accessibilityLabel="Delete entry"
             />
@@ -67,6 +67,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   mood: { fontWeight: '700', fontSize: 18 },
   date: { fontSize: 12, marginBottom: 8 },
-  notes: { marginBottom: 12, fontSize: 15, lineHeight: 22 },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8, marginRight: -8 },
+  notes: { marginBottom: 12, fontSize: 16, lineHeight: 22 },
+  actions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8, paddingRight: 4 },
 });

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, useTheme, Card, ProgressBar } from 'react-native-paper';
 import { getEntries } from '../services/entriesService';
 import { getMoodEmoji } from '../services/moodUtils';
@@ -66,10 +67,11 @@ export default function InsightsScreen() {
   const totalMoods = Object.keys(moodStats).length;
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-      <Text variant="headlineMedium" style={{ marginBottom: 20 }}>
-        Insights
-      </Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+        <Text variant="headlineMedium" style={{ marginBottom: 20 }}>
+          Insights
+        </Text>
 
       {totalEntries === 0 ? (
         <Card style={{ backgroundColor: colors.surfaceVariant, padding: 24 }}>
@@ -140,7 +142,8 @@ export default function InsightsScreen() {
           </View>
         </>
       )}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
