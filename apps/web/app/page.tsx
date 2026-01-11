@@ -15,38 +15,19 @@ export default function Home() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
+
 
   useEffect(() => {
-    // 1. Check Authentication
-    const storedToken = localStorage.getItem("token");
-    if (!storedToken) {
-      router.push("/login");
-      return;
-    }
-    setToken(storedToken);
-
-    // 2. Fetch Entries with Authorization Header
-    fetch("http://localhost:3001/entries", {
-      headers: {
-        Authorization: `Bearer ${storedToken}`, // CRITICAL FIX
-      },
-    })
-      .then((res) => {
-        if (res.status === 401) {
-          localStorage.removeItem("token");
-          router.push("/login");
-          throw new Error("Unauthorized");
-        }
-        return res.json();
-      })
+    // Fetch entries (no auth required)
+    fetch("http://localhost:3001/entries")
+      .then((res) => res.json())
       .then((data) => setEntries(data))
       .catch((err) => console.error("Failed to fetch entries:", err));
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim() || !token) return;
+    if (!text.trim()) return;
     setLoading(true);
 
     try {
@@ -54,16 +35,9 @@ export default function Home() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // CRITICAL FIX
         },
         body: JSON.stringify({ content: text }),
       });
-
-      if (res.status === 401) {
-        localStorage.removeItem("token");
-        router.push("/login");
-        return;
-      }
 
       const newEntry = await res.json();
       setEntries([newEntry, ...entries]);
@@ -75,8 +49,7 @@ export default function Home() {
     }
   };
 
-  // Prevent flash of content before redirect
-  if (!token) return null;
+  // No auth required
 
   // Helper for colors
   const getMoodColor = (mood: string) => {
@@ -93,15 +66,7 @@ export default function Home() {
     <main className="min-h-screen p-8 max-w-2xl mx-auto font-sans">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">📘 Mood Diary</h1>
-        <button
-          onClick={() => {
-            localStorage.removeItem("token");
-            router.push("/login");
-          }}
-          className="text-sm text-red-600 hover:underline"
-        >
-          Logout
-        </button>
+        {/* auth removed: logout not needed */}
       </div>
 
       <form onSubmit={handleSubmit} className="mb-8 gap-4 flex flex-col">
