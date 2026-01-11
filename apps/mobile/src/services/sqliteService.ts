@@ -8,8 +8,6 @@ export interface StoredEntry {
   date: string;
   mood: string;
   notes?: string;
-  synced: number; // 0 or 1
-  remoteId?: string;
   createdAt: number;
 }
 
@@ -30,8 +28,6 @@ export const SQLiteService = {
           date TEXT NOT NULL,
           mood TEXT NOT NULL,
           notes TEXT,
-          synced INTEGER NOT NULL DEFAULT 0,
-          remoteId TEXT,
           createdAt INTEGER NOT NULL
         );
       `);
@@ -86,8 +82,6 @@ export const SQLiteService = {
               date: entry.date,
               mood: entry.mood,
               notes: entry.notes,
-              synced: entry.synced ? 1 : 0,
-              remoteId: entry.remoteId,
               createdAt: entry.createdAt || Date.now(),
             });
             migratedCount++;
@@ -113,9 +107,9 @@ export const SQLiteService = {
   async insertEntry(entry: StoredEntry) {
     const database = await this.getDb();
     await database.runAsync(
-      `INSERT OR REPLACE INTO entries (id, date, mood, notes, synced, remoteId, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [entry.id, entry.date, entry.mood, entry.notes ?? null, entry.synced ?? 0, entry.remoteId ?? null, entry.createdAt]
+      `INSERT OR REPLACE INTO entries (id, date, mood, notes, createdAt)
+       VALUES (?, ?, ?, ?, ?)` ,
+      [entry.id, entry.date, entry.mood, entry.notes ?? null, entry.createdAt]
     );
   },
 
@@ -136,14 +130,6 @@ export const SQLiteService = {
     return entries;
   },
 
-  async getPendingEntries(): Promise<StoredEntry[]> {
-    const database = await this.getDb();
-    const entries = await database.getAllAsync<StoredEntry>(
-      'SELECT * FROM entries WHERE synced = 0 ORDER BY createdAt DESC'
-    );
-    return entries;
-  },
-
   async updateEntry(id: string, updates: Partial<StoredEntry>) {
     const database = await this.getDb();
     const sets: string[] = [];
@@ -160,14 +146,6 @@ export const SQLiteService = {
     if (updates.notes !== undefined) {
       sets.push('notes = ?');
       params.push(updates.notes ?? null);
-    }
-    if (updates.synced !== undefined) {
-      sets.push('synced = ?');
-      params.push(updates.synced);
-    }
-    if (updates.remoteId !== undefined) {
-      sets.push('remoteId = ?');
-      params.push(updates.remoteId ?? null);
     }
 
     params.push(id);

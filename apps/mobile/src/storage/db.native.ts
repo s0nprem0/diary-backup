@@ -14,8 +14,6 @@ export async function getDb() {
       date TEXT NOT NULL,
       mood TEXT NOT NULL,
       notes TEXT,
-      synced INTEGER NOT NULL DEFAULT 0,
-      remoteId TEXT,
       updatedAt INTEGER NOT NULL
     );`
   );
@@ -27,14 +25,12 @@ export interface DbEntry {
   date: string;
   mood: string;
   notes?: string | null;
-  synced: number; // 0/1
-  remoteId?: string | null;
   updatedAt: number; // epoch ms
 }
 
 export async function listEntries(): Promise<DbEntry[]> {
   const db = await getDb();
-  const rows = await db.getAllAsync<DbEntry>('SELECT id, date, mood, notes, synced, remoteId, updatedAt FROM entries ORDER BY date DESC');
+  const rows = await db.getAllAsync<DbEntry>('SELECT id, date, mood, notes, updatedAt FROM entries ORDER BY date DESC');
   return rows;
 }
 
@@ -42,8 +38,8 @@ export async function insertEntry(e: Omit<DbEntry, 'updatedAt'>) {
   const db = await getDb();
   const now = Date.now();
   await db.runAsync(
-    'INSERT OR REPLACE INTO entries (id, date, mood, notes, synced, remoteId, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [e.id, e.date, e.mood, e.notes ?? null, e.synced ?? 0, e.remoteId ?? null, now]
+    'INSERT OR REPLACE INTO entries (id, date, mood, notes, updatedAt) VALUES (?, ?, ?, ?, ?)',
+    [e.id, e.date, e.mood, e.notes ?? null, now]
   );
 }
 
@@ -55,8 +51,6 @@ export async function patchEntry(id: string, patch: Partial<DbEntry>) {
   if (patch.date !== undefined) { sets.push('date = ?'); params.push(patch.date); }
   if (patch.mood !== undefined) { sets.push('mood = ?'); params.push(patch.mood); }
   if (patch.notes !== undefined) { sets.push('notes = ?'); params.push(patch.notes ?? null); }
-  if (patch.synced !== undefined) { sets.push('synced = ?'); params.push(patch.synced); }
-  if (patch.remoteId !== undefined) { sets.push('remoteId = ?'); params.push(patch.remoteId ?? null); }
   sets.push('updatedAt = ?'); params.push(now);
   params.push(id);
   await db.runAsync(`UPDATE entries SET ${sets.join(', ')} WHERE id = ?`, params);
@@ -65,10 +59,4 @@ export async function patchEntry(id: string, patch: Partial<DbEntry>) {
 export async function removeEntry(id: string) {
   const db = await getDb();
   await db.runAsync('DELETE FROM entries WHERE id = ?', [id]);
-}
-
-export async function listPendingEntries(): Promise<DbEntry[]> {
-  const db = await getDb();
-  const rows = await db.getAllAsync<DbEntry>('SELECT id, date, mood, notes, synced, remoteId, updatedAt FROM entries WHERE synced = 0 ORDER BY updatedAt DESC');
-  return rows;
 }

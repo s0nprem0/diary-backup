@@ -25,7 +25,3 @@ export async function patchEntry(id: string, patch: Partial<DbEntry>) {
 export async function removeEntry(id: string) {
   await SQLiteService.deleteEntry(id);
 }
-
-export async function listPendingEntries(): Promise<DbEntry[]> {
-  return SQLiteService.getPendingEntries();
-}

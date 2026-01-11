@@ -7,8 +7,6 @@ export interface DbEntry {
   date: string;
   mood: string;
   notes?: string | null;
-  synced: number; // 0/1
-  remoteId?: string | null;
   updatedAt: number; // epoch ms
 }
 
@@ -41,7 +39,7 @@ export async function insertEntry(e: Omit<DbEntry, 'updatedAt'>) {
   const now = Date.now();
   const rows = load();
   const idx = rows.findIndex((r) => r.id === e.id);
-  const row: DbEntry = { ...e, notes: e.notes ?? null, synced: e.synced ?? 0, remoteId: e.remoteId ?? null, updatedAt: now };
+  const row: DbEntry = { ...e, notes: e.notes ?? null, updatedAt: now };
   if (idx >= 0) rows[idx] = row; else rows.unshift(row);
   save(rows);
 }
@@ -55,7 +53,6 @@ export async function patchEntry(id: string, patch: Partial<DbEntry>) {
     ...rows[idx],
     ...patch,
     notes: patch.notes !== undefined ? (patch.notes ?? null) : rows[idx].notes,
-    remoteId: patch.remoteId !== undefined ? (patch.remoteId ?? null) : rows[idx].remoteId,
     updatedAt: now,
   } as DbEntry;
   save(rows);
@@ -68,6 +65,5 @@ export async function removeEntry(id: string) {
 }
 
 export async function listPendingEntries(): Promise<DbEntry[]> {
-  const rows = load();
-  return rows.filter((r) => !r.synced);
+  return [];
 }

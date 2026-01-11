@@ -4,7 +4,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import NetInfo from '@react-native-community/netinfo';
 import { Provider as PaperProvider, Button, Text } from 'react-native-paper';
 
 import AddEntryScreen from './src/screens/AddEntryScreen';
@@ -12,30 +11,8 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import BottomTabs from './src/navigation/BottomTabs';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
-import { mobileAuthService } from './src/services/authService';
 import { lightTheme, darkTheme } from './src/theme';
-import { syncPendingEntries } from './src/services/entriesService';
 import { SQLiteService } from './src/services/sqliteService';
-import { ENTRIES_API } from './config';
-
-// helper to post a local entry to the server
-const postEntryToServer = async (entry: any) => {
-  try {
-    const token = await mobileAuthService.getToken();
-    const res = await fetch(`${ENTRIES_API}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-      body: JSON.stringify({ notes: entry.notes || '', date: entry.date, mood: entry.mood }),
-    });
-    const data = await res.json();
-    return { ok: res.ok, data };
-  } catch (e) {
-    return { ok: false };
-  }
-};
 
 export type RootStackParamList = {
   Login: undefined;
@@ -84,29 +61,8 @@ function AppNavigator() {
         return;
       }
 
-      // attempt to sync any pending entries when the app starts
-      try {
-        await syncPendingEntries(postEntryToServer as any);
-      } catch (e) {
-        // Log but don't block - sync errors are non-critical
-        console.warn('Background sync on startup failed:', e);
-      }
-
       setIsLoading(false);
     })();
-  }, []);
-
-  useEffect(() => {
-    // when connectivity returns, try to sync pending entries
-    const sub = NetInfo.addEventListener((state) => {
-      if (state.isConnected) {
-        syncPendingEntries(postEntryToServer as any).catch((err) => {
-          // Log but don't block
-          console.warn('Background sync failed:', err);
-        });
-      }
-    });
-    return () => sub();
   }, []);
 
   const handleOnboardingComplete = async () => {

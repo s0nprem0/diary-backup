@@ -20,7 +20,7 @@ const SLIDES: OnboardingSlide[] = [
   },
   {
     title: 'Write Your Thoughts',
-    description: 'Add entries with your mood. Data is saved locally and synced when online',
+    description: 'Add entries with your mood. Data stays private on your device',
     emoji: '✍️',
     color: '#6AB7FF',
   },

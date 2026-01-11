@@ -2,9 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { FAB, Text, Button, useTheme } from 'react-native-paper';
 import NetInfo from '@react-native-community/netinfo';
-import { getEntries, deleteEntry, syncPendingEntries, Entry as LocalEntry } from '../services/entriesService';
-import { mobileAuthService } from '../services/authService';
-import { ENTRIES_API } from '../../config';
+import { getEntries, deleteEntry, Entry as LocalEntry } from '../services/entriesService';
 import EntryCard from '../components/EntryCard';
 
 export default function HomeScreen({ navigation }: any) {
@@ -18,54 +16,7 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   useEffect(() => {
-    const unsub = navigation.addListener('focus', async () => {
-      await load();
-      // Attempt background sync of pending entries whenever returning to Home
-      try {
-        const token = await mobileAuthService.getToken();
-        await syncPendingEntries(async (entry: LocalEntry) => {
-          // If entry has a remoteId, try to patch; else create
-          try {
-            if (entry.remoteId) {
-              const res = await fetch(`${ENTRIES_API}/${entry.remoteId}`, {
-                method: 'PATCH',
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...(token && { Authorization: `Bearer ${token}` }),
-                },
-                body: JSON.stringify({
-                  notes: entry.notes || '',
-                  mood: entry.mood,
-                  date: entry.date,
-                }),
-              });
-              return { ok: res.ok, data: res.ok ? await res.json() : undefined };
-            } else {
-              const res = await fetch(ENTRIES_API, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...(token && { Authorization: `Bearer ${token}` }),
-                },
-                body: JSON.stringify({
-                  notes: entry.notes || '',
-                  mood: entry.mood,
-                  date: entry.date,
-                }),
-              });
-              return { ok: res.ok, data: res.ok ? await res.json() : undefined };
-            }
-          } catch (e) {
-            return { ok: false };
-          }
-        });
-        // reload to reflect any synced status updates
-        await load();
-      } catch (err) {
-        // Log but don't block - sync errors are non-critical
-        console.warn('Background sync on focus failed:', err);
-      }
-    });
+    const unsub = navigation.addListener('focus', load);
     load();
     return unsub;
   }, [navigation]);
@@ -89,28 +40,8 @@ export default function HomeScreen({ navigation }: any) {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          // Find the entry to get its remoteId
-          const entry = entries.find(e => e.id === id);
-
           // Delete locally first
           await deleteEntry(id);
-
-          // Try to delete from remote if we have a remoteId and are online
-          if (entry?.remoteId && isConnected) {
-            try {
-              const token = await mobileAuthService.getToken();
-              await fetch(`${ENTRIES_API}/${entry.remoteId}`, {
-                method: 'DELETE',
-                headers: {
-                  ...(token && { Authorization: `Bearer ${token}` }),
-                },
-              });
-            } catch (err) {
-              // Ignore remote delete errors - local delete already happened
-              console.warn('Failed to delete from remote:', err);
-            }
-          }
-
           load();
         },
       },
@@ -131,7 +62,7 @@ export default function HomeScreen({ navigation }: any) {
       {!isConnected && (
         <View style={[styles.offlineBanner, { backgroundColor: colors.onSurfaceVariant }]}>
           <Text style={{ color: colors.surface, fontSize: 13, fontWeight: '500' }}>
-            📡 Offline — entries will sync when connected
+            📡 Offline — entries stay saved on this device
           </Text>
         </View>
       )}

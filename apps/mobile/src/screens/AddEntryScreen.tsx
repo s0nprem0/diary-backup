@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TextInput, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
+import { View, TextInput, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
 import { Button, Text, useTheme, Snackbar } from 'react-native-paper';
 import { addEntry, updateEntry } from '../services/entriesService';
-import { mobileAuthService } from '../services/authService';
-import { ENTRIES_API } from '../../config';
 import { inferMood } from '../services/mood';
 import { getMoodEmoji, MOOD_OPTIONS } from '../services/moodUtils';
 import * as Haptics from 'expo-haptics';
@@ -82,15 +80,15 @@ export default function AddEntryScreen({ navigation, route }: any) {
 
     setIsSaving(true);
 
-    // Local-first: save to SQLite immediately (don't wait for haptics or API)
+    // Local-first: save to SQLite immediately (don't wait for haptics)
     try {
       if (isEditing) {
         // Update locally immediately
-        await updateEntry(existing.id, { notes, mood, synced: false });
+        await updateEntry(existing.id, { notes, mood });
       } else {
         // Create locally immediately
         const date = new Date().toISOString();
-        await addEntry({ date, mood, notes }, false);
+        await addEntry({ date, mood, notes });
       }
 
       setIsSaving(false);
@@ -111,62 +109,6 @@ export default function AddEntryScreen({ navigation, route }: any) {
       } catch (err) {
         // Haptics not critical, but log for debugging
         console.debug('Haptics failed:', err);
-      }
-
-      // Sync to remote in background (don't wait)
-      const token = await mobileAuthService.getToken();
-      const date = isEditing ? existing.date : new Date().toISOString();
-
-      if (isEditing && existing?.remoteId) {
-        // Background PATCH for existing entry with remoteId
-        fetch(`${ENTRIES_API}/${existing.remoteId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
-          body: JSON.stringify({ notes, mood, date }),
-        })
-          .then(res => {
-            if (res.ok) {
-              updateEntry(existing.id, { synced: true });
-            } else {
-              console.warn('Background sync PATCH failed:', res.status);
-            }
-          })
-          .catch((err) => {
-            // Sync failed, will retry on next app launch
-            console.warn('Background sync PATCH error:', err);
-          });
-      } else if (!isEditing) {
-        // Background POST for new entry - IMPORTANT: Capture remoteId
-        fetch(ENTRIES_API, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
-          body: JSON.stringify({ notes: notes || '', mood, date }),
-        })
-          .then(res => {
-            if (res.ok) {
-              return res.json().then(remote => {
-                // Extract remoteId from response (could be 'id' or '_id')
-                const remoteId = remote.id || remote._id || remote.remoteId;
-                if (remoteId) {
-                  // Update local entry with remoteId and mark as synced
-                  updateEntry(existing.id, { remoteId, synced: true });
-                }
-              });
-            } else {
-              console.warn('Background sync POST failed:', res.status);
-              return Promise.reject(new Error(`HTTP ${res.status}`));
-            }
-          })
-          .catch((err) => {
-            // Sync failed, will retry on next app launch
-            console.warn('Background sync POST error:', err);
-          });
       }
     } catch (error) {
       setIsSaving(false);

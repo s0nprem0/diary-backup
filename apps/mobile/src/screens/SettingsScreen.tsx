@@ -128,7 +128,7 @@ export default function SettingsScreen({ setIsDark, isDark: propIsDark }: { setI
           Version 1.0.0
         </Text>
         <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 12, lineHeight: 20 }}>
-          Mood Diary helps you track your emotional well-being over time. All entries are stored locally and synced securely when online.
+          Mood Diary helps you track your emotional well-being over time. All entries are stored locally on your device.
         </Text>
       </View>
 
