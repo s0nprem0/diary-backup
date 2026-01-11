@@ -45,11 +45,27 @@ export default function HistoryScreen({ navigation }: any) {
   const [entries, setEntries] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMoodFilter, setSelectedMoodFilter] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { colors } = useTheme();
 
+  const loadEntries = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getEntries();
+      setEntries(data);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    (async () => setEntries(await getEntries()))();
+    loadEntries();
   }, []);
+
+  useEffect(() => {
+    const unsub = navigation.addListener('focus', loadEntries);
+    return unsub;
+  }, [navigation]);
 
   const handleEdit = (entry: any) => navigation.navigate('AddEntry', { entry });
 
@@ -61,7 +77,7 @@ export default function HistoryScreen({ navigation }: any) {
         style: 'destructive',
         onPress: async () => {
           await deleteEntry(id);
-          setEntries(await getEntries());
+          await loadEntries();
         },
       },
     ]);
@@ -69,10 +85,13 @@ export default function HistoryScreen({ navigation }: any) {
 
   // Filter entries by search query and mood
   const filteredEntries = entries.filter((e) => {
+    const notesStr = (e.notes || '').toLowerCase();
+    const moodStr = (e.mood || '').toLowerCase();
+    const searchLower = (searchQuery || '').toLowerCase();
     const matchesSearch =
       !searchQuery ||
-      e.notes.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.mood.toLowerCase().includes(searchQuery.toLowerCase());
+      notesStr.includes(searchLower) ||
+      moodStr.includes(searchLower);
     const matchesMood = !selectedMoodFilter || e.mood === selectedMoodFilter;
     return matchesSearch && matchesMood;
   });
@@ -89,7 +108,11 @@ export default function HistoryScreen({ navigation }: any) {
         History
       </Text>
 
-      {allEntriesCount > 0 ? (
+      {isLoading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 32 }}>
+          <Text>Loading entries...</Text>
+        </View>
+      ) : allEntriesCount > 0 ? (
         <>
           {/* Search Bar */}
           <Searchbar

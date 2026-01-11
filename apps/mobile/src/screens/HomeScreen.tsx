@@ -8,7 +8,7 @@ import { ENTRIES_API } from '../../config';
 import EntryCard from '../components/EntryCard';
 
 export default function HomeScreen({ navigation }: any) {
-  const [entries, setEntries] = useState<any[]>([]);
+  const [entries, setEntries] = useState<LocalEntry[]>([]);
   const [isConnected, setIsConnected] = useState(true);
   const { colors } = useTheme();
 
@@ -81,7 +81,7 @@ export default function HomeScreen({ navigation }: any) {
         style: 'destructive',
         onPress: async () => {
           // Find the entry to get its remoteId
-          const entry = entries.find(e => e.id === id || e._id === id);
+          const entry = entries.find(e => e.id === id);
 
           // Delete locally first
           await deleteEntry(id);
@@ -159,7 +159,7 @@ export default function HomeScreen({ navigation }: any) {
           </View>
         ) : (
           todayEntries.map((e) => (
-            <EntryCard key={e.id || e._id} entry={e} onEdit={handleEdit} onDelete={handleDelete} />
+            <EntryCard key={e.id} entry={e} onEdit={handleEdit} onDelete={handleDelete} />
           ))
         )}
       </ScrollView>

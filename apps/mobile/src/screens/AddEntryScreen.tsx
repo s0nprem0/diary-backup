@@ -65,7 +65,7 @@ export default function AddEntryScreen({ navigation, route }: any) {
 
       if (isEditing) {
         // Update locally first
-        await updateEntry(existing.id || existing._id, { notes, mood, synced: false });
+        await updateEntry(existing.id, { notes, mood, synced: false });
 
         // Fire-and-forget remote update
         const remoteId = existing?.remoteId;
@@ -80,7 +80,7 @@ export default function AddEntryScreen({ navigation, route }: any) {
               body: JSON.stringify({ content: notes, mood }),
             });
             if (res.ok) {
-              await updateEntry(existing.id || existing._id, { synced: true });
+              await updateEntry(existing.id, { synced: true });
             }
           } catch {
             // stay unsynced; background sync will retry later
