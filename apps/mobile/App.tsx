@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { Provider as PaperProvider } from 'react-native-paper';
+import { Provider as PaperProvider, Button, Text } from 'react-native-paper';
 
 import AddEntryScreen from './src/screens/AddEntryScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
@@ -57,12 +58,20 @@ function AppNavigator() {
   const [isDark, setIsDark] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        // Initialize SQLite first
-        await SQLiteService.init();
+        // Initialize SQLite first - this is critical
+        try {
+          await SQLiteService.init();
+        } catch (dbError) {
+          console.error('Critical: Failed to initialize database:', dbError);
+          setInitError('Failed to initialize database. Please restart the app.');
+          setIsLoading(false);
+          return; // Stop further initialization if DB fails
+        }
 
         const v = await AsyncStorage.getItem(THEME_KEY);
         setIsDark(v === '1');
@@ -70,13 +79,19 @@ function AppNavigator() {
         setHasOnboarded(onboarded === '1');
       } catch (e) {
         console.error('Error initializing app:', e);
+        setInitError('Failed to initialize app. Please restart.');
+        setIsLoading(false);
+        return;
       }
+
       // attempt to sync any pending entries when the app starts
       try {
         await syncPendingEntries(postEntryToServer as any);
       } catch (e) {
-        // ignore sync errors on startup
+        // Log but don't block - sync errors are non-critical
+        console.warn('Background sync on startup failed:', e);
       }
+
       setIsLoading(false);
     })();
   }, []);
@@ -85,8 +100,9 @@ function AppNavigator() {
     // when connectivity returns, try to sync pending entries
     const sub = NetInfo.addEventListener((state) => {
       if (state.isConnected) {
-        syncPendingEntries(postEntryToServer as any).catch(() => {
-          /* ignore */
+        syncPendingEntries(postEntryToServer as any).catch((err) => {
+          // Log but don't block
+          console.warn('Background sync failed:', err);
         });
       }
     });
@@ -97,6 +113,32 @@ function AppNavigator() {
     await AsyncStorage.setItem(ONBOARDING_KEY, '1');
     setHasOnboarded(true);
   };
+
+  // Show error UI if initialization failed
+  if (initError) {
+    return (
+      <SafeAreaProvider>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 }}>
+          <Text variant="headlineSmall" style={{ marginBottom: 16, textAlign: 'center' }}>
+            ⚠️ Error
+          </Text>
+          <Text style={{ textAlign: 'center', marginBottom: 20 }}>
+            {initError}
+          </Text>
+          <Button
+            mode="contained"
+            onPress={() => {
+              // Force app restart
+              setInitError(null);
+              setIsLoading(true);
+            }}
+          >
+            Retry
+          </Button>
+        </View>
+      </SafeAreaProvider>
+    );
+  }
 
   if (isLoading || authLoading) {
     return null;

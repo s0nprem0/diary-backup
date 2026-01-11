@@ -21,23 +21,43 @@ export default function InsightsScreen() {
     return counts;
   };
 
-  // Calculate streak
+  // Calculate streak - count consecutive calendar days with entries
   const getStreakInfo = () => {
-    if (entries.length === 0) return { streak: 0, streakDate: null };
+    if (entries.length === 0) return { streak: 0, latestDate: null };
+
+    // Sort entries by date descending (newest first)
+    const sortedEntries = [...entries].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
 
     let streak = 1;
-    for (let i = 1; i < entries.length; i++) {
-      const prevDate = new Date(entries[i - 1].date).toDateString();
-      const currDate = new Date(entries[i].date).toDateString();
+    let lastDate = new Date(sortedEntries[0].date);
+    lastDate.setHours(0, 0, 0, 0); // Normalize to start of day
 
-      if (prevDate === currDate) {
+    // Check for consecutive days going backwards
+    for (let i = 1; i < sortedEntries.length; i++) {
+      const currentDate = new Date(sortedEntries[i].date);
+      currentDate.setHours(0, 0, 0, 0); // Normalize to start of day
+
+      // Calculate difference in days
+      const dayDiff = Math.floor(
+        (lastDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // If dates are consecutive (exactly 1 day apart), continue streak
+      if (dayDiff === 1) {
         streak++;
+        lastDate = currentDate;
       } else {
+        // Break in streak
         break;
       }
     }
 
-    return { streak, latestDate: new Date(entries[0].date).toLocaleDateString() };
+    return {
+      streak,
+      latestDate: new Date(sortedEntries[0].date).toLocaleDateString()
+    };
   };
 
   const moodStats = getMoodStats();

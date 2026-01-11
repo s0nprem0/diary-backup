@@ -5,13 +5,8 @@ import { getEntries, deleteEntry } from '../services/entriesService';
 import { MOOD_OPTIONS, getMoodEmoji } from '../services/moodUtils';
 import EntryCard from '../components/EntryCard';
 
-// Group entries by date
+// Group entries by date - timezone-safe implementation
 const groupEntriesByDate = (entries: any[]): Record<string, any[]> => {
-  const today = new Date().toDateString();
-  const yesterday = new Date(Date.now() - 86400000).toDateString();
-  const weekAgo = new Date(Date.now() - 604800000).toDateString();
-  const monthAgo = new Date(Date.now() - 2592000000).toDateString();
-
   const groups: Record<string, any[]> = {
     'Today': [],
     'Yesterday': [],
@@ -20,18 +15,26 @@ const groupEntriesByDate = (entries: any[]): Record<string, any[]> => {
     'Older': [],
   };
 
-  entries.forEach((entry) => {
-    const entryDate = new Date(entry.date).toDateString();
-    const entryTime = new Date(entry.date).getTime();
-    const nowTime = Date.now();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const weekAgo = new Date(today);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const monthAgo = new Date(today);
+  monthAgo.setDate(monthAgo.getDate() - 30);
 
-    if (entryDate === today) {
+  entries.forEach((entry) => {
+    const entryDate = new Date(entry.date);
+    const entryDateOnly = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+
+    if (entryDateOnly.getTime() === today.getTime()) {
       groups['Today'].push(entry);
-    } else if (entryDate === yesterday) {
+    } else if (entryDateOnly.getTime() === yesterday.getTime()) {
       groups['Yesterday'].push(entry);
-    } else if (entryTime > nowTime - 604800000) {
+    } else if (entryDateOnly.getTime() >= weekAgo.getTime()) {
       groups['This Week'].push(entry);
-    } else if (entryTime > nowTime - 2592000000) {
+    } else if (entryDateOnly.getTime() >= monthAgo.getTime()) {
       groups['This Month'].push(entry);
     } else {
       groups['Older'].push(entry);

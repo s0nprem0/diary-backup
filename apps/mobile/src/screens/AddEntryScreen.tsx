@@ -5,7 +5,7 @@ import { addEntry, updateEntry } from '../services/entriesService';
 import { mobileAuthService } from '../services/authService';
 import { ENTRIES_API } from '../../config';
 import { inferMood } from '../services/mood';
-import { getMoodEmoji } from '../services/moodUtils';
+import { getMoodEmoji, MOOD_OPTIONS } from '../services/moodUtils';
 import * as Haptics from 'expo-haptics';
 
 export default function AddEntryScreen({ navigation, route }: any) {
@@ -22,7 +22,9 @@ export default function AddEntryScreen({ navigation, route }: any) {
   useEffect(() => {
     if (!isEditing && notes.trim()) {
       const { mood: predictedMood } = inferMood(notes);
-      setMood(predictedMood || 'Neutral');
+      // Only set if it's a valid mood option
+      const validMood = MOOD_OPTIONS.includes(predictedMood) ? predictedMood : 'Neutral';
+      setMood(validMood);
     }
   }, [notes, isEditing]);
 
@@ -54,9 +56,27 @@ export default function AddEntryScreen({ navigation, route }: any) {
     return unsubscribe;
   }, [navigation, notes, initialNotes, isEditing]);
 
+  // Validate mood is in allowed list
+  const isValidMood = (): boolean => {
+    if (!mood) {
+      Alert.alert('Missing mood', 'Please select a valid mood.');
+      return false;
+    }
+    if (!MOOD_OPTIONS.includes(mood)) {
+      Alert.alert('Invalid mood', `Mood must be one of: ${MOOD_OPTIONS.join(', ')}`);
+      return false;
+    }
+    return true;
+  };
+
   const handleSave = async () => {
     if (!notes.trim()) {
       Alert.alert('Empty entry', 'Please write something before saving.');
+      return;
+    }
+
+    // Validate mood before saving
+    if (!isValidMood()) {
       return;
     }
 
@@ -88,8 +108,9 @@ export default function AddEntryScreen({ navigation, route }: any) {
       // Haptics: fire-and-forget (don't await)
       try {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      } catch {
-        /* ignore haptics errors */
+      } catch (err) {
+        // Haptics not critical, but log for debugging
+        console.debug('Haptics failed:', err);
       }
 
       // Sync to remote in background (don't wait)
@@ -97,7 +118,7 @@ export default function AddEntryScreen({ navigation, route }: any) {
       const date = isEditing ? existing.date : new Date().toISOString();
 
       if (isEditing && existing?.remoteId) {
-        // Background PATCH
+        // Background PATCH for existing entry with remoteId
         fetch(`${ENTRIES_API}/${existing.remoteId}`, {
           method: 'PATCH',
           headers: {
@@ -107,15 +128,18 @@ export default function AddEntryScreen({ navigation, route }: any) {
           body: JSON.stringify({ notes, mood, date }),
         })
           .then(res => {
-            if (res.ok && isEditing) {
+            if (res.ok) {
               updateEntry(existing.id, { synced: true });
+            } else {
+              console.warn('Background sync PATCH failed:', res.status);
             }
           })
-          .catch(() => {
+          .catch((err) => {
             // Sync failed, will retry on next app launch
+            console.warn('Background sync PATCH error:', err);
           });
       } else if (!isEditing) {
-        // Background POST for new entry
+        // Background POST for new entry - IMPORTANT: Capture remoteId
         fetch(ENTRIES_API, {
           method: 'POST',
           headers: {
@@ -124,12 +148,24 @@ export default function AddEntryScreen({ navigation, route }: any) {
           },
           body: JSON.stringify({ notes: notes || '', mood, date }),
         })
-          .then(res => res.json())
-          .then(remote => {
-            // We'll update sync status in the background
+          .then(res => {
+            if (res.ok) {
+              return res.json().then(remote => {
+                // Extract remoteId from response (could be 'id' or '_id')
+                const remoteId = remote.id || remote._id || remote.remoteId;
+                if (remoteId) {
+                  // Update local entry with remoteId and mark as synced
+                  updateEntry(existing.id, { remoteId, synced: true });
+                }
+              });
+            } else {
+              console.warn('Background sync POST failed:', res.status);
+              return Promise.reject(new Error(`HTTP ${res.status}`));
+            }
           })
-          .catch(() => {
+          .catch((err) => {
             // Sync failed, will retry on next app launch
+            console.warn('Background sync POST error:', err);
           });
       }
     } catch (error) {

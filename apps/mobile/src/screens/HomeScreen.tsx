@@ -61,8 +61,9 @@ export default function HomeScreen({ navigation }: any) {
         });
         // reload to reflect any synced status updates
         await load();
-      } catch {
-        // ignore sync errors
+      } catch (err) {
+        // Log but don't block - sync errors are non-critical
+        console.warn('Background sync on focus failed:', err);
       }
     });
     load();
@@ -106,7 +107,7 @@ export default function HomeScreen({ navigation }: any) {
               });
             } catch (err) {
               // Ignore remote delete errors - local delete already happened
-              console.log('Failed to delete from remote:', err);
+              console.warn('Failed to delete from remote:', err);
             }
           }
 

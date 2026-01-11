@@ -74,6 +74,8 @@ export const SQLiteService = {
       console.log(`📦 Migrating ${entryKeys.length} entries from AsyncStorage to SQLite...`);
 
       const values = await AsyncStorage.multiGet(entryKeys);
+      let migratedCount = 0;
+      let failedCount = 0;
 
       for (const [key, value] of values) {
         if (value) {
@@ -88,13 +90,20 @@ export const SQLiteService = {
               remoteId: entry.remoteId,
               createdAt: entry.createdAt || Date.now(),
             });
+            migratedCount++;
           } catch (parseError) {
-            console.warn(`Failed to migrate entry ${key}:`, parseError);
+            failedCount++;
+            console.warn(`Failed to migrate entry ${key}: ${(parseError as Error).message}`);
+            // Continue with next entry - don't lose others due to one bad entry
           }
         }
       }
 
-      console.log('✅ Migration complete');
+      console.log(`✅ Migration complete: ${migratedCount} migrated, ${failedCount} failed`);
+
+      if (failedCount > 0) {
+        console.warn(`⚠️ ${failedCount} entries could not be migrated due to data corruption. Please review AsyncStorage data.`);
+      }
     } catch (error) {
       console.error('❌ Migration failed:', error);
       // Don't throw - continue with empty SQLite
