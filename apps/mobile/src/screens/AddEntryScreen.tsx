@@ -4,9 +4,8 @@ import { Button, Text, useTheme, Snackbar, Chip, ActivityIndicator } from 'react
 import { addEntry, updateEntry } from '../services/entriesService';
 import { ENTRIES_API } from '../../config';
 import { inferMood } from '../services/mood';
+import { MOOD_OPTIONS, getMoodEmoji } from '../services/moodUtils';
 import * as Haptics from 'expo-haptics';
-
-const MOOD_OPTIONS = ['Happy', 'Sad', 'Neutral', 'Anxious', 'Excited', 'Tired'];
 
 export default function AddEntryScreen({ navigation, route }: any) {
   const { colors } = useTheme();
@@ -150,7 +149,7 @@ export default function AddEntryScreen({ navigation, route }: any) {
                     color: mood === m ? colors.onPrimary : colors.onSurface,
                   }}
                 >
-                  {m}
+                  {getMoodEmoji(m)} {m}
                 </Chip>
               ))}
             </View>

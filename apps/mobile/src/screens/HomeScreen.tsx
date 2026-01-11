@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { FAB, Text, Button, useTheme } from 'react-native-paper';
+import NetInfo from '@react-native-community/netinfo';
 import { getEntries, deleteEntry, syncPendingEntries, Entry as LocalEntry } from '../services/entriesService';
 import { ENTRIES_API } from '../../config';
 import EntryCard from '../components/EntryCard';
 
 export default function HomeScreen({ navigation }: any) {
   const [entries, setEntries] = useState<any[]>([]);
+  const [isConnected, setIsConnected] = useState(true);
   const { colors } = useTheme();
 
   const load = async () => {
@@ -26,14 +28,14 @@ export default function HomeScreen({ navigation }: any) {
               const res = await fetch(`${ENTRIES_API}/${entry.remoteId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: entry.notes || '' }),
+                body: JSON.stringify({ content: entry.notes || '', mood: entry.mood }),
               });
               return { ok: res.ok, data: res.ok ? await res.json() : undefined };
             } else {
               const res = await fetch(ENTRIES_API, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: entry.notes || '' }),
+                body: JSON.stringify({ content: entry.notes || '', mood: entry.mood }),
               });
               return { ok: res.ok, data: res.ok ? await res.json() : undefined };
             }
@@ -50,6 +52,14 @@ export default function HomeScreen({ navigation }: any) {
     load();
     return unsub;
   }, [navigation]);
+
+  // Monitor connectivity
+  useEffect(() => {
+    const sub = NetInfo.addEventListener((state) => {
+      setIsConnected(state.isConnected ?? true);
+    });
+    return () => sub();
+  }, []);
 
   const handleEdit = (entry: any) => {
     navigation.navigate('AddEntry', { entry });
@@ -79,6 +89,15 @@ export default function HomeScreen({ navigation }: any) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Offline Indicator */}
+      {!isConnected && (
+        <View style={[styles.offlineBanner, { backgroundColor: colors.onSurfaceVariant }]}>
+          <Text style={{ color: colors.surface, fontSize: 13, fontWeight: '500' }}>
+            📡 Offline — entries will sync when connected
+          </Text>
+        </View>
+      )}
+
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
         <View style={{ marginBottom: 20 }}>
           <Text variant="headlineMedium">Today</Text>
@@ -134,5 +153,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 12,
+  },
+  offlineBanner: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

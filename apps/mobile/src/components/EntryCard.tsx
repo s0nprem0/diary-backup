@@ -1,10 +1,17 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Card, useTheme, IconButton } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { getMoodEmoji } from '../services/moodUtils';
+import { useFadeInAnimation } from '../services/animations';
 
 export default function EntryCard({ entry, onEdit, onDelete }: { entry: any; onEdit?: (e: any) => void; onDelete?: (id: string) => void }) {
   const { colors } = useTheme();
+  const { fadeAnim, fadeIn } = useFadeInAnimation();
+
+  useEffect(() => {
+    fadeIn();
+  }, []);
 
   // Determine sync status indicator
   const getSyncStatus = () => {
@@ -24,11 +31,14 @@ export default function EntryCard({ entry, onEdit, onDelete }: { entry: any; onE
   });
 
   return (
-    <Card style={styles.card} elevation={2}>
+    <Animated.View style={{ opacity: fadeAnim }}>
+      <Card style={styles.card} elevation={2}>
       <Card.Content>
         {/* Header: Mood + Sync Status */}
         <View style={styles.header}>
-          <Text style={[styles.mood, { color: colors.primary }]}>{entry.mood}</Text>
+          <Text style={[styles.mood, { color: colors.primary }]}>
+            {getMoodEmoji(entry.mood)} {entry.mood}
+          </Text>
           <View style={styles.syncBadge}>
             <MaterialCommunityIcons name={syncStatus.icon} size={16} color={syncStatus.color} />
             <Text style={[styles.syncLabel, { color: syncStatus.color }]}>{syncStatus.label}</Text>
@@ -64,6 +74,7 @@ export default function EntryCard({ entry, onEdit, onDelete }: { entry: any; onE
         </View>
       </Card.Content>
     </Card>
+    </Animated.View>
   );
 }
 

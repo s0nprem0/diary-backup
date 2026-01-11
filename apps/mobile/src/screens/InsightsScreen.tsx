@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { Text, useTheme, Card, ProgressBar } from 'react-native-paper';
 import { getEntries } from '../services/entriesService';
+import { getMoodEmoji } from '../services/moodUtils';
 
 export default function InsightsScreen() {
   const [entries, setEntries] = useState<any[]>([]);
@@ -93,7 +94,7 @@ export default function InsightsScreen() {
                 <View key={mood} style={{ marginBottom: 16 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
                     <Text variant="bodyMedium" style={{ color: colors.onSurface }}>
-                      {mood}
+                      {getMoodEmoji(mood)} {mood}
                     </Text>
                     <Text variant="labelSmall" style={{ color: colors.onSurfaceVariant }}>
                       {count} ({percentage.toFixed(0)}%)

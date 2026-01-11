@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View } from 'react-native';
-import { Switch, Text, Button } from 'react-native-paper';
+import { View, ScrollView, Alert } from 'react-native';
+import { Switch, Text, Button, useTheme, Card, Divider } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getReminderTime, isReminderEnabled, setDailyReminder, disableReminders, formatReminderTime } from '../services/reminders';
 
 const THEME_KEY = 'APP_THEME_DARK';
 
 export default function SettingsScreen({ setIsDark, isDark: propIsDark }: { setIsDark: (v: boolean) => void; isDark?: boolean }) {
+  const { colors } = useTheme();
   const [isDark, setLocalDark] = useState<boolean>(propIsDark ?? false);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderTime, setReminderTime] = useState<{ hour: number; minute: number } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -19,6 +23,15 @@ export default function SettingsScreen({ setIsDark, isDark: propIsDark }: { setI
     })();
   }, [propIsDark]);
 
+  useEffect(() => {
+    (async () => {
+      const enabled = await isReminderEnabled();
+      const time = await getReminderTime();
+      setReminderEnabled(enabled);
+      setReminderTime(time);
+    })();
+  }, []);
+
   const toggle = async () => {
     const next = !isDark;
     setLocalDark(next);
@@ -26,16 +39,96 @@ export default function SettingsScreen({ setIsDark, isDark: propIsDark }: { setI
     setIsDark(next);
   };
 
+  const handleSetReminder = () => {
+    Alert.alert('Set Daily Reminder', 'What time would you like to be reminded to journal?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: '6:00 AM', onPress: () => setReminderAndRefresh(6, 0) },
+      { text: '9:00 AM', onPress: () => setReminderAndRefresh(9, 0) },
+      { text: '12:00 PM', onPress: () => setReminderAndRefresh(12, 0) },
+      { text: '3:00 PM', onPress: () => setReminderAndRefresh(15, 0) },
+      { text: '6:00 PM', onPress: () => setReminderAndRefresh(18, 0) },
+      { text: '9:00 PM', onPress: () => setReminderAndRefresh(21, 0) },
+    ]);
+  };
+
+  const setReminderAndRefresh = async (hour: number, minute: number) => {
+    await setDailyReminder(hour, minute);
+    setReminderTime({ hour, minute });
+    setReminderEnabled(true);
+  };
+
+  const handleDisableReminder = async () => {
+    await disableReminders();
+    setReminderEnabled(false);
+    setReminderTime(null);
+  };
+
   return (
-    <View style={{ padding: 16 }}>
-      <Text variant="headlineSmall">Settings</Text>
-      <View style={{ marginTop: 12 }}>
-        <Text>Dark Theme</Text>
-        <Switch value={isDark} onValueChange={toggle} />
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+      <Text variant="headlineSmall" style={{ marginBottom: 20, color: colors.onSurface }}>
+        Settings
+      </Text>
+
+      {/* Theme Section */}
+      <Card style={{ marginBottom: 16 }}>
+        <Card.Content>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text variant="titleMedium" style={{ color: colors.onSurface }}>
+              Dark Theme
+            </Text>
+            <Switch value={isDark} onValueChange={toggle} />
+          </View>
+        </Card.Content>
+      </Card>
+
+      {/* Reminders Section */}
+      <Text variant="labelLarge" style={{ marginTop: 20, marginBottom: 8, color: colors.onSurfaceVariant }}>
+        Notifications
+      </Text>
+      <Card style={{ marginBottom: 12 }}>
+        <Card.Content>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <Text variant="titleMedium" style={{ color: colors.onSurface }}>
+              Daily Reminder
+            </Text>
+            <Switch value={reminderEnabled} onValueChange={(value) => {
+              if (value) {
+                handleSetReminder();
+              } else {
+                handleDisableReminder();
+              }
+            }} />
+          </View>
+          {reminderEnabled && reminderTime && (
+            <>
+              <Divider style={{ marginVertical: 8 }} />
+              <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
+                Reminder set for {formatReminderTime(reminderTime.hour, reminderTime.minute)}
+              </Text>
+              <Button
+                mode="outlined"
+                onPress={handleSetReminder}
+                compact
+              >
+                Change time
+              </Button>
+            </>
+          )}
+        </Card.Content>
+      </Card>
+
+      {/* Info Section */}
+      <View style={{ marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.outlineVariant }}>
+        <Text variant="labelMedium" style={{ color: colors.onSurfaceVariant }}>
+          App Info
+        </Text>
+        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
+          Version 1.0.0
+        </Text>
+        <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 12, lineHeight: 20 }}>
+          Mood Diary helps you track your emotional well-being over time. All entries are stored locally and synced securely when online.
+        </Text>
       </View>
-      <View style={{ marginTop: 12 }}>
-        <Button mode="outlined">Reminders (coming)</Button>
-      </View>
-    </View>
+    </ScrollView>
   );
 }

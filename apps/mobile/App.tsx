@@ -7,6 +7,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { Provider as PaperProvider } from 'react-native-paper';
 
 import AddEntryScreen from './src/screens/AddEntryScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
 import BottomTabs from './src/navigation/BottomTabs';
 import { lightTheme, darkTheme } from './src/theme';
 import { syncPendingEntries } from './src/services/entriesService';
@@ -18,7 +19,7 @@ const postEntryToServer = async (entry: any) => {
     const res = await fetch(`${ENTRIES_API}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: entry.notes || '', date: entry.date }),
+      body: JSON.stringify({ content: entry.notes || '', date: entry.date, mood: entry.mood }),
     });
     const data = await res.json();
     return { ok: res.ok, data };
@@ -28,6 +29,7 @@ const postEntryToServer = async (entry: any) => {
 };
 
 export type RootStackParamList = {
+  Onboarding: undefined;
   Main: undefined;
   Home: undefined;
   AddEntry: undefined;
@@ -39,15 +41,20 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const THEME_KEY = 'APP_THEME_DARK';
+const ONBOARDING_KEY = 'APP_ONBOARDED';
 
 export default function App() {
   const [isDark, setIsDark] = useState(false);
+  const [hasOnboarded, setHasOnboarded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
         const v = await AsyncStorage.getItem(THEME_KEY);
         setIsDark(v === '1');
+        const onboarded = await AsyncStorage.getItem(ONBOARDING_KEY);
+        setHasOnboarded(onboarded === '1');
       } catch (e) {
         // ignore
       }
@@ -57,6 +64,7 @@ export default function App() {
       } catch (e) {
         // ignore sync errors on startup
       }
+      setIsLoading(false);
     })();
   }, []);
 
@@ -72,11 +80,27 @@ export default function App() {
     return () => sub();
   }, []);
 
+  const handleOnboardingComplete = async () => {
+    await AsyncStorage.setItem(ONBOARDING_KEY, '1');
+    setHasOnboarded(true);
+  };
+
+  if (isLoading) {
+    return null;
+  }
+
   return (
     <SafeAreaProvider>
       <PaperProvider theme={isDark ? (darkTheme as any) : (lightTheme as any)}>
         <NavigationContainer>
-          <Stack.Navigator initialRouteName="Main" screenOptions={{ headerShown: false }}>
+          <Stack.Navigator initialRouteName={hasOnboarded ? 'Main' : 'Onboarding'} screenOptions={{ headerShown: false }}>
+            {!hasOnboarded && (
+              <Stack.Screen
+                name="Onboarding"
+              >
+                {() => <OnboardingScreen onComplete={handleOnboardingComplete} />}
+              </Stack.Screen>
+            )}
             <Stack.Screen name="Main">
               {() => <BottomTabs isDark={isDark} setIsDark={setIsDark} />}
             </Stack.Screen>

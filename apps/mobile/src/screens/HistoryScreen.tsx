@@ -2,9 +2,44 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, View, Alert } from 'react-native';
 import { Text, useTheme, Searchbar, Chip, Button } from 'react-native-paper';
 import { getEntries, deleteEntry } from '../services/entriesService';
+import { MOOD_OPTIONS, getMoodEmoji } from '../services/moodUtils';
 import EntryCard from '../components/EntryCard';
 
-const MOOD_FILTERS = ['Happy', 'Sad', 'Neutral', 'Anxious', 'Excited', 'Tired'];
+// Group entries by date
+const groupEntriesByDate = (entries: any[]): Record<string, any[]> => {
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  const weekAgo = new Date(Date.now() - 604800000).toDateString();
+  const monthAgo = new Date(Date.now() - 2592000000).toDateString();
+
+  const groups: Record<string, any[]> = {
+    'Today': [],
+    'Yesterday': [],
+    'This Week': [],
+    'This Month': [],
+    'Older': [],
+  };
+
+  entries.forEach((entry) => {
+    const entryDate = new Date(entry.date).toDateString();
+    const entryTime = new Date(entry.date).getTime();
+    const nowTime = Date.now();
+
+    if (entryDate === today) {
+      groups['Today'].push(entry);
+    } else if (entryDate === yesterday) {
+      groups['Yesterday'].push(entry);
+    } else if (entryTime > nowTime - 604800000) {
+      groups['This Week'].push(entry);
+    } else if (entryTime > nowTime - 2592000000) {
+      groups['This Month'].push(entry);
+    } else {
+      groups['Older'].push(entry);
+    }
+  });
+
+  return groups;
+};
 
 export default function HistoryScreen({ navigation }: any) {
   const [entries, setEntries] = useState<any[]>([]);
@@ -42,6 +77,10 @@ export default function HistoryScreen({ navigation }: any) {
     return matchesSearch && matchesMood;
   });
 
+  // Group filtered entries by date
+  const entriesByGroup = groupEntriesByDate(filteredEntries);
+  const nonEmptyGroups = Object.entries(entriesByGroup).filter(([_, entries]) => entries.length > 0);
+
   const allEntriesCount = entries.length;
 
   return (
@@ -77,7 +116,7 @@ export default function HistoryScreen({ navigation }: any) {
                   Clear filter ✕
                 </Chip>
               )}
-              {MOOD_FILTERS.map((mood) => (
+              {MOOD_OPTIONS.map((mood: string) => (
                 <Chip
                   key={mood}
                   selected={selectedMoodFilter === mood}
@@ -90,7 +129,7 @@ export default function HistoryScreen({ navigation }: any) {
                     color: selectedMoodFilter === mood ? colors.onPrimary : colors.onSurface,
                   }}
                 >
-                  {mood}
+                  {getMoodEmoji(mood)} {mood}
                 </Chip>
               ))}
             </View>
@@ -118,8 +157,23 @@ export default function HistoryScreen({ navigation }: any) {
               </Text>
             </View>
           ) : (
-            filteredEntries.map((e) => (
-              <EntryCard key={e.id || e._id} entry={e} onEdit={handleEdit} onDelete={handleDelete} />
+            nonEmptyGroups.map(([groupName, groupEntries]) => (
+              <View key={groupName} style={{ marginTop: 16 }}>
+                <Text
+                  variant="labelLarge"
+                  style={{
+                    color: colors.onSurfaceVariant,
+                    paddingHorizontal: 4,
+                    marginBottom: 8,
+                    marginTop: groupName !== 'Today' ? 12 : 0,
+                  }}
+                >
+                  {groupName}
+                </Text>
+                {groupEntries.map((e) => (
+                  <EntryCard key={e.id || e._id} entry={e} onEdit={handleEdit} onDelete={handleDelete} />
+                ))}
+              </View>
             ))
           )}
         </>
