@@ -7,21 +7,17 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
-      "inputs": ["src/**", "package.json", "tsconfig.json"]
+      "inputs": ["src/**", "package.json", "tsconfig.json", ".env*"]
     },
     "dev": {
       "cache": false,
       "persistent": true
     },
     "lint": {
-      "dependsOn": ["^lint"],
-      "inputs": ["src/**/*.ts", "src/**/*.tsx", ".eslintrc.*", "tsconfig.json"],
-      "outputLogs": "new-only"
+      "outputs": []
     },
     "type-check": {
-      "dependsOn": ["^type-check"],
-      "inputs": ["src/**/*.ts", "src/**/*.tsx", "tsconfig.json"],
-      "cache": true
+      "outputs": []
     },
     "clean": {
       "cache": false
