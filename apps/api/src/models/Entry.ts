@@ -1,9 +1,11 @@
 import { readEntries, writeEntries, generateId, StoredEntry } from '../config/db';
 
 export interface EntryInput {
-  content: string;
-  mood: string;
-  sentimentScore: number;
+  content?: string;
+  notes?: string;
+  mood?: string;
+  sentimentScore?: number;
+  date?: string;
 }
 
 export class Entry {
@@ -23,13 +25,14 @@ export class Entry {
   static async create(data: EntryInput): Promise<StoredEntry> {
     const entries = readEntries();
     const now = new Date().toISOString();
+    const userDate = data.date || now;
 
     const newEntry: StoredEntry = {
       _id: generateId(),
-      content: data.content,
-      mood: data.mood,
-      sentimentScore: data.sentimentScore,
-      createdAt: now,
+      content: data.content || data.notes || '',
+      mood: data.mood || 'Neutral',
+      sentimentScore: data.sentimentScore ?? 0,
+      createdAt: userDate,
       updatedAt: now,
     };
 
@@ -50,14 +53,23 @@ export class Entry {
 
     if (index === -1) return null;
 
-    entries[index] = {
-      ...entries[index],
-      ...update,
+    const updates: any = {
       updatedAt: new Date().toISOString(),
     };
 
+    if (update.content !== undefined) updates.content = update.content;
+    if (update.notes !== undefined) updates.content = update.notes;
+    if (update.mood !== undefined) updates.mood = update.mood;
+    if (update.sentimentScore !== undefined) updates.sentimentScore = update.sentimentScore;
+    if (update.date !== undefined) updates.createdAt = update.date;
+
+    entries[index] = {
+      ...entries[index],
+      ...updates,
+    };
+
     writeEntries(entries);
-    return options?.new ? entries[index] : null;
+    return entries[index];
   }
 
   // Delete entry by ID

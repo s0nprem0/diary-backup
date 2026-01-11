@@ -7,17 +7,24 @@ interface EmotionResult {
   mood: string;
 }
 
+// Mood mapping must match mobile app MOOD_OPTIONS
+const MOOD_MAP = ['Happy', 'Sad', 'Neutral', 'Anxious', 'Excited', 'Tired'];
+
 export const analyzeEmotion = (text: string): EmotionResult => {
   const result = sentiment.analyze(text);
   const score = result.score;
 
-  // Simple rule-based mood detection based on score
-  // You can replace this logic with an AI API call later
+  // Rule-based mood detection based on sentiment score
   let mood = "Neutral";
   if (score > 2) mood = "Happy";
-  else if (score > 0) mood = "Good";
+  else if (score > 0) mood = "Excited";
   else if (score < -2) mood = "Sad";
-  else if (score < 0) mood = "Bad";
+  else if (score < -1) mood = "Anxious";
+
+  // Ensure mood is in valid list
+  if (!MOOD_MAP.includes(mood)) {
+    mood = "Neutral";
+  }
 
   return { score, mood };
 };
