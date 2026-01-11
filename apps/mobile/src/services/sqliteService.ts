@@ -113,15 +113,6 @@ export const SQLiteService = {
     );
   },
 
-  async getEntry(id: string): Promise<StoredEntry | null> {
-    const database = await this.getDb();
-    const result = await database.getFirstAsync<StoredEntry>(
-      'SELECT * FROM entries WHERE id = ?',
-      [id]
-    );
-    return result || null;
-  },
-
   async getAllEntries(): Promise<StoredEntry[]> {
     const database = await this.getDb();
     const entries = await database.getAllAsync<StoredEntry>(
@@ -159,10 +150,5 @@ export const SQLiteService = {
   async deleteEntry(id: string) {
     const database = await this.getDb();
     await database.runAsync('DELETE FROM entries WHERE id = ?', [id]);
-  },
-
-  async clearAll() {
-    const database = await this.getDb();
-    await database.runAsync('DELETE FROM entries');
   },
 };

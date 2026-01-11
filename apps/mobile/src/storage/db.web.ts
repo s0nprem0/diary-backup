@@ -63,7 +63,3 @@ export async function removeEntry(id: string) {
   const filtered = rows.filter((r) => r.id !== id);
   save(filtered);
 }
-
-export async function listPendingEntries(): Promise<DbEntry[]> {
-  return [];
-}

@@ -20,9 +20,6 @@ export const getEntries = async (): Promise<Entry[]> => {
   }));
 };
 
-// Deprecated: persisted via SQLite now
-export const saveEntries = async (_entries: Entry[]) => {};
-
 export const addEntry = async (entry: Omit<Entry, 'id'>) => {
   const newEntry: Entry = { ...entry, id: genId() };
   await insertEntry({
@@ -47,4 +44,3 @@ export const updateEntry = async (id: string, patch: Partial<Entry>) => {
 export const deleteEntry = async (id: string) => {
   await removeEntry(id);
 };
-
