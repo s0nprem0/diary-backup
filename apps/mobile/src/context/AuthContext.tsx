@@ -5,7 +5,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
+  isPasswordSetup: boolean;
   login: (password: string) => Promise<boolean>;
+  signup: (password: string) => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
@@ -16,6 +18,7 @@ const AUTH_TOKEN_KEY = 'mood_diary_auth_token';
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPasswordSetup, setIsPasswordSetup] = useState(false);
 
   // Check authentication status on mount
   useEffect(() => {
@@ -24,6 +27,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuthStatus = async () => {
     try {
+      // Check if password has been set up
+      const passwordSetup = await mobileAuthService.isPasswordSetup();
+      setIsPasswordSetup(passwordSetup);
+
       // Try to get token from AsyncStorage first (migration)
       let token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
 
@@ -41,6 +48,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }
   };
+
+  const signup = useCallback(async (password: string): Promise<boolean> => {
+    const success = await mobileAuthService.signup(password);
+    if (success) {
+      setIsAuthenticated(true);
+      setIsPasswordSetup(true);
+    }
+    return success;
+  }, []);
 
   const login = useCallback(async (password: string): Promise<boolean> => {
     const success = await mobileAuthService.login(password);
@@ -60,7 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         isAuthenticated,
         isLoading,
+        isPasswordSetup,
         login,
+        signup,
         logout,
       }}
     >

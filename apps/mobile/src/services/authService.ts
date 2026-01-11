@@ -3,40 +3,101 @@ import * as SecureStore from 'expo-secure-store';
 import { jwtEncode } from './tokenService';
 
 const AUTH_TOKEN_KEY = 'mood_diary_auth_token';
+const PASSWORD_SET_KEY = 'mood_diary_password_set';
+const STORED_PASSWORD_KEY = 'mood_diary_stored_password';
 
-// Get password from environment or use default for development
-const getAuthPassword = (): string => {
-  // In production, set MOOD_DIARY_PASSWORD env var
-  return process.env.MOOD_DIARY_PASSWORD || 'diary123';
+// Check if password has been set by the user
+const isPasswordSet = async (): Promise<boolean> => {
+  try {
+    const passwordSet = await AsyncStorage.getItem(PASSWORD_SET_KEY);
+    return passwordSet === 'true';
+  } catch (error) {
+    console.error('Failed to check if password is set:', error);
+    return false;
+  }
+};
+
+// Get stored password
+const getStoredPassword = async (): Promise<string | null> => {
+  try {
+    // Try to get from secure storage first
+    try {
+      const password = await SecureStore.getItemAsync(STORED_PASSWORD_KEY);
+      if (password) return password;
+    } catch {
+      // Fall back to AsyncStorage
+    }
+
+    const password = await AsyncStorage.getItem(STORED_PASSWORD_KEY);
+    return password;
+  } catch (error) {
+    console.error('Failed to get stored password:', error);
+    return null;
+  }
 };
 
 export const mobileAuthService = {
+  // Create password for first-time users
+  signup: async (password: string): Promise<boolean> => {
+    if (!password || password.trim().length < 6) {
+      console.error('Password must be at least 6 characters');
+      return false;
+    }
+
+    try {
+      // Store password securely
+      try {
+        await SecureStore.setItemAsync(STORED_PASSWORD_KEY, password);
+      } catch {
+        // Fall back to AsyncStorage if secure store fails
+        await AsyncStorage.setItem(STORED_PASSWORD_KEY, password);
+      }
+
+      // Mark password as set
+      await AsyncStorage.setItem(PASSWORD_SET_KEY, 'true');
+
+      // Automatically login after signup
+      return await mobileAuthService.login(password);
+    } catch (error) {
+      console.error('Failed to create password:', error);
+      return false;
+    }
+  },
+
   // Authenticate user with password
   login: async (password: string): Promise<boolean> => {
-    const expectedPassword = getAuthPassword();
+    try {
+      const storedPassword = await getStoredPassword();
 
-    if (password === expectedPassword) {
-      try {
-        // Generate secure JWT token with expiration
-        const token = await jwtEncode(
-          { sub: 'user', iat: Date.now() },
-          'secret_key' // In production, use environment variable
-        );
+      if (password === storedPassword) {
+        try {
+          // Generate secure JWT token with expiration
+          const token = await jwtEncode(
+            { sub: 'user', iat: Date.now() },
+            'secret_key' // In production, use environment variable
+          );
 
-        // Store token securely using expo-secure-store (encrypted)
-        await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
+          // Store token securely using expo-secure-store (encrypted)
+          await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
 
-        // Also store in AsyncStorage as fallback (non-critical)
-        await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
+          // Also store in AsyncStorage as fallback (non-critical)
+          await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
 
-        return true;
-      } catch (error) {
-        console.error('Failed to save auth token:', error);
-        return false;
+          return true;
+        } catch (error) {
+          console.error('Failed to save auth token:', error);
+          return false;
+        }
       }
+      return false;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   },
+
+  // Check if password has been set up
+  isPasswordSetup: isPasswordSet,
 
   // Check if user is authenticated
   isAuthenticated: async (): Promise<boolean> => {
