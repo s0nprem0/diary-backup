@@ -1,18 +1,58 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
-import { Button, Text, useTheme } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, TextInput, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
+import { Button, Text, useTheme, Snackbar, Chip, ActivityIndicator } from 'react-native-paper';
 import { addEntry, updateEntry } from '../services/entriesService';
 import { ENTRIES_API } from '../../config';
 import { inferMood } from '../services/mood';
 import * as Haptics from 'expo-haptics';
 
+const MOOD_OPTIONS = ['Happy', 'Sad', 'Neutral', 'Anxious', 'Excited', 'Tired'];
+
 export default function AddEntryScreen({ navigation, route }: any) {
   const { colors } = useTheme();
   const existing = route?.params?.entry;
   const [notes, setNotes] = useState(existing?.notes || '');
+  const [mood, setMood] = useState(existing?.mood || 'Neutral');
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const isEditing = !!existing;
+  const initialNotes = existing?.notes || '';
+
+  // Warn on unsaved changes when navigating away
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      if (!isEditing && notes !== initialNotes && notes.trim()) {
+        e.preventDefault();
+        Alert.alert('Discard draft?', 'You have unsaved changes. Discard them?', [
+          { text: 'Keep drafting', onPress: () => {} },
+          {
+            text: 'Discard',
+            onPress: () => navigation.dispatch(e.data.action),
+            style: 'destructive',
+          },
+        ]);
+      } else if (isEditing && notes !== initialNotes) {
+        e.preventDefault();
+        Alert.alert('Discard changes?', 'You have unsaved changes to this entry.', [
+          { text: 'Keep editing', onPress: () => {} },
+          {
+            text: 'Discard',
+            onPress: () => navigation.dispatch(e.data.action),
+            style: 'destructive',
+          },
+        ]);
+      }
+    });
+    return unsubscribe;
+  }, [navigation, notes, initialNotes, isEditing]);
 
   const handleSave = async () => {
+    if (!notes.trim()) {
+      Alert.alert('Empty entry', 'Please write something before saving.');
+      return;
+    }
+
+    setIsSaving(true);
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch {
@@ -23,7 +63,7 @@ export default function AddEntryScreen({ navigation, route }: any) {
     try {
       if (isEditing) {
         // Update locally first
-        await updateEntry(existing.id || existing._id, { notes, synced: false });
+        await updateEntry(existing.id || existing._id, { notes, mood, synced: false });
 
         // Fire-and-forget remote update
         const remoteId = existing?.remoteId;
@@ -32,7 +72,7 @@ export default function AddEntryScreen({ navigation, route }: any) {
             const res = await fetch(`${ENTRIES_API}/${remoteId}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ content: notes }),
+              body: JSON.stringify({ content: notes, mood }),
             });
             if (res.ok) {
               await updateEntry(existing.id || existing._id, { synced: true });
@@ -42,16 +82,15 @@ export default function AddEntryScreen({ navigation, route }: any) {
           }
         }
       } else {
-        // Create locally first with inferred mood for better UX
-        const inferred = inferMood(notes || '');
-        const local = await addEntry({ date: new Date().toISOString(), mood: inferred.mood, notes }, false);
+        // Create locally first with user-selected mood
+        const local = await addEntry({ date: new Date().toISOString(), mood, notes }, false);
 
         // Fire-and-forget remote create
         try {
           const res = await fetch(ENTRIES_API, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: notes || '' }),
+            body: JSON.stringify({ content: notes || '', mood }),
           });
           if (res.ok) {
             const remote = await res.json();
@@ -71,37 +110,99 @@ export default function AddEntryScreen({ navigation, route }: any) {
       // swallow; local writes already done
     }
 
-    // Navigate back to the Home tab inside the Main stack.
-    // `Home` lives in the nested BottomTabs navigator registered under the "Main" stack entry.
-    try {
-      navigation.navigate('Main', { screen: 'Home' });
-    } catch {
-      // fallback to a generic goBack if nested navigation fails
-      navigation.goBack();
-    }
+    setIsSaving(false);
+    setShowSaveSuccess(true);
+
+    // Show success message then navigate after 1.5 seconds
+    setTimeout(() => {
+      try {
+        navigation.navigate('Main', { screen: 'Home' });
+      } catch {
+        navigation.goBack();
+      }
+    }, 1500);
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-      <View style={{ padding: 16 }}>
-        <Text variant="headlineSmall" style={{ marginBottom: 8 }}>How are you feeling?</Text>
+    <>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
+          <Text variant="headlineSmall" style={{ marginBottom: 16 }}>
+            {isEditing ? 'Edit Entry' : 'How are you feeling?'}
+          </Text>
 
-        <TextInput
-          placeholder="Write a short note..."
-          placeholderTextColor={colors.onSurfaceVariant || colors.onSurface}
-          value={notes}
-          onChangeText={setNotes}
-          style={[styles.textarea, { borderColor: colors.outline || colors.surfaceVariant || colors.surface, backgroundColor: colors.surface }]}
-          multiline
-        />
-        <Button mode="contained" onPress={handleSave} style={{ marginTop: 12 }}>
-          {isEditing ? 'Update Entry' : 'Save Entry'}
-        </Button>
-      </View>
-    </KeyboardAvoidingView>
+          {/* Mood Selector */}
+          <View style={{ marginBottom: 20 }}>
+            <Text variant="labelLarge" style={{ marginBottom: 8, color: colors.onSurface }}>
+              Your mood
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {MOOD_OPTIONS.map((m) => (
+                <Chip
+                  key={m}
+                  selected={mood === m}
+                  mode={mood === m ? 'flat' : 'outlined'}
+                  onPress={() => setMood(m)}
+                  style={{
+                    backgroundColor: mood === m ? colors.primary : 'transparent',
+                  }}
+                  textStyle={{
+                    color: mood === m ? colors.onPrimary : colors.onSurface,
+                  }}
+                >
+                  {m}
+                </Chip>
+              ))}
+            </View>
+          </View>
+
+          {/* Notes Input */}
+          <Text variant="labelLarge" style={{ marginBottom: 8, color: colors.onSurface }}>
+            What's on your mind?
+          </Text>
+          <TextInput
+            placeholder="Write your thoughts here..."
+            placeholderTextColor={colors.onSurfaceVariant || colors.onSurface}
+            value={notes}
+            onChangeText={setNotes}
+            style={[
+              {
+                height: 150,
+                borderWidth: 1,
+                padding: 12,
+                borderRadius: 8,
+                borderColor: colors.outline || colors.surfaceVariant || colors.surface,
+                backgroundColor: colors.surface,
+                color: colors.onSurface,
+                fontSize: 16,
+              },
+            ]}
+            multiline
+            editable={!isSaving}
+          />
+
+          {/* Save Button */}
+          <Button
+            mode="contained"
+            onPress={handleSave}
+            disabled={isSaving}
+            style={{ marginTop: 20 }}
+            loading={isSaving}
+          >
+            {isSaving ? 'Saving...' : isEditing ? 'Update Entry' : 'Save Entry'}
+          </Button>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        visible={showSaveSuccess}
+        onDismiss={() => setShowSaveSuccess(false)}
+        duration={2000}
+        style={{ backgroundColor: colors.primary }}
+      >
+        ✓ Entry saved successfully
+      </Snackbar>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  textarea: { height: 120, borderWidth: 1, padding: 12, borderRadius: 8, marginTop: 12 },
-});

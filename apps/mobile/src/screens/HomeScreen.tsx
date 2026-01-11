@@ -7,6 +7,7 @@ import EntryCard from '../components/EntryCard';
 
 export default function HomeScreen({ navigation }: any) {
   const [entries, setEntries] = useState<any[]>([]);
+  const { colors } = useTheme();
 
   const load = async () => {
     const data = await getEntries();
@@ -55,8 +56,8 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert('Delete entry', 'Are you sure you want to delete this entry?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('Delete entry?', 'This action cannot be undone.', [
+      { text: 'Keep it', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
@@ -68,24 +69,58 @@ export default function HomeScreen({ navigation }: any) {
     ]);
   };
 
-  const { colors } = useTheme();
+  const getTodayEntries = () => {
+    const today = new Date().toDateString();
+    return entries.filter((e) => new Date(e.date).toDateString() === today);
+  };
+
+  const todayEntries = getTodayEntries();
+  const allEntriesCount = entries.length;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }] }>
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
-        <Text variant="headlineMedium">Today</Text>
-        {entries.length === 0 ? (
-          <View style={{ marginTop: 24 }}>
-            <Text>No entries yet — start your mood diary.</Text>
-            <Button mode="contained" style={{ marginTop: 12 }} onPress={() => navigation.navigate('AddEntry')}>
-              Add Entry
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+        <View style={{ marginBottom: 20 }}>
+          <Text variant="headlineMedium">Today</Text>
+          {allEntriesCount > 0 && (
+            <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
+              {allEntriesCount} total entries
+            </Text>
+          )}
+        </View>
+
+        {todayEntries.length === 0 ? (
+          <View style={[styles.emptyState, { backgroundColor: colors.surfaceVariant }]}>
+            <Text variant="displaySmall" style={{ marginBottom: 8 }}>
+              📖
+            </Text>
+            <Text variant="titleLarge" style={{ marginBottom: 8, color: colors.onSurface }}>
+              Begin your mood journey
+            </Text>
+            <Text variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 16, textAlign: 'center' }}>
+              No entries yet today. What's on your mind?
+            </Text>
+            <Button
+              mode="contained"
+              onPress={() => navigation.navigate('AddEntry')}
+              style={{ alignSelf: 'center' }}
+              icon="plus"
+            >
+              Write Now
             </Button>
           </View>
         ) : (
-          entries.map((e) => <EntryCard key={e.id || e._id} entry={e} onEdit={handleEdit} onDelete={handleDelete} />)
+          todayEntries.map((e) => (
+            <EntryCard key={e.id || e._id} entry={e} onEdit={handleEdit} onDelete={handleDelete} />
+          ))
         )}
       </ScrollView>
-      <FAB icon="plus" onPress={() => navigation.navigate('AddEntry')} style={styles.fab} accessibilityLabel="Add entry" />
+      <FAB
+        icon="plus"
+        onPress={() => navigation.navigate('AddEntry')}
+        style={styles.fab}
+        accessibilityLabel="Add entry"
+      />
     </View>
   );
 }
@@ -93,4 +128,11 @@ export default function HomeScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   fab: { position: 'absolute', right: 16, bottom: 24 },
+  emptyState: {
+    borderRadius: 12,
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
 });
