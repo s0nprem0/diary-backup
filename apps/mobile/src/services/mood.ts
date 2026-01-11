@@ -1,18 +1,36 @@
-// Lightweight client-side mood inference for offline UX.
-// Not as accurate as server analysis, but avoids "Unknown".
+// Dictionary-based offline mood inference to map journal text to our supported moods.
+// Prefers clarity over heavy sentiment analysis to stay cheap on-device.
 
-const positiveWords = [
-  'happy', 'joy', 'great', 'good', 'love', 'excited', 'awesome', 'fantastic', 'wonderful', 'smile', 'grateful', 'calm', 'peace'
-];
-const negativeWords = [
-  'sad', 'bad', 'terrible', 'hate', 'angry', 'upset', 'anxious', 'depressed', 'awful', 'worried', 'tired', 'stress', 'cry'
-];
+const MOOD_DICTIONARY: Record<string, string[]> = {
+  Happy: ['happy', 'joy', 'great', 'good', 'love', 'grateful', 'content', 'calm', 'peace', 'smile', 'ok', 'fine'],
+  Sad: ['sad', 'down', 'blue', 'unhappy', 'depressed', 'cry', 'lonely', 'miserable', 'bad'],
+  Anxious: ['anxious', 'worried', 'nervous', 'panic', 'stressed', 'stress', 'overwhelmed', 'fear'],
+  Excited: ['excited', 'thrilled', 'eager', 'pumped', 'stoked'],
+  Tired: ['tired', 'sleepy', 'exhausted', 'fatigued', 'drained'],
+  Neutral: [],
+};
+
+const escapeRegex = (word: string) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const countOccurrences = (text: string, word: string) => {
+  if (!word.trim()) return 0;
+  const regex = new RegExp(`\\b${escapeRegex(word)}\\b`, 'g');
+  return (text.match(regex) || []).length;
+};
 
 export function inferMood(text: string): { mood: string; score: number } {
   const content = (text || '').toLowerCase();
-  let score = 0;
-  for (const w of positiveWords) if (content.includes(w)) score += 1;
-  for (const w of negativeWords) if (content.includes(w)) score -= 1;
-  const mood = score > 0 ? 'Happy' : score < 0 ? 'Sad' : 'Neutral';
-  return { mood, score };
+  let bestMood: string = 'Neutral';
+  let bestScore = 0;
+
+  Object.entries(MOOD_DICTIONARY).forEach(([mood, keywords]) => {
+    const score = keywords.reduce((sum, word) => sum + countOccurrences(content, word), 0);
+    if (score > bestScore || (score === bestScore && bestMood === 'Neutral' && mood !== 'Neutral')) {
+      bestMood = mood;
+      bestScore = score;
+    }
+  });
+
+  // If nothing matched, stay neutral
+  return { mood: bestMood, score: bestScore };
 }
