@@ -3,6 +3,7 @@ import { View, StyleSheet, TextInput, KeyboardAvoidingView, Platform } from 'rea
 import { Button, Text, useTheme } from 'react-native-paper';
 import { addEntry, updateEntry } from '../services/entriesService';
 import { ENTRIES_API } from '../../config';
+import { inferMood } from '../services/mood';
 import * as Haptics from 'expo-haptics';
 
 export default function AddEntryScreen({ navigation, route }: any) {
@@ -41,8 +42,9 @@ export default function AddEntryScreen({ navigation, route }: any) {
           }
         }
       } else {
-        // Create locally first
-        const local = await addEntry({ date: new Date().toISOString(), mood: 'Unknown', notes }, false);
+        // Create locally first with inferred mood for better UX
+        const inferred = inferMood(notes || '');
+        const local = await addEntry({ date: new Date().toISOString(), mood: inferred.mood, notes }, false);
 
         // Fire-and-forget remote create
         try {
