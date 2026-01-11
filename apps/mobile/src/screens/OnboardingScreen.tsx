@@ -8,7 +8,7 @@ interface OnboardingSlide {
   title: string;
   description: string;
   emoji: string;
-  color: string;
+  colorKey: 'primary' | 'secondary';
 }
 
 const SLIDES: OnboardingSlide[] = [
@@ -16,25 +16,25 @@ const SLIDES: OnboardingSlide[] = [
     title: 'Welcome to Mood Diary',
     description: 'Track your emotions and understand your patterns over time',
     emoji: '📖',
-    color: '#3367D6',
+    colorKey: 'primary',
   },
   {
     title: 'Write Your Thoughts',
     description: 'Add entries with your mood. Data stays private on your device',
     emoji: '✍️',
-    color: '#6AB7FF',
+    colorKey: 'secondary',
   },
   {
     title: 'Explore Your Insights',
     description: 'See your mood distribution and patterns to better understand yourself',
     emoji: '📊',
-    color: '#3367D6',
+    colorKey: 'primary',
   },
   {
     title: 'All Set!',
     description: "You're ready to start journaling. Your entries are private and always yours",
     emoji: '🎉',
-    color: '#6AB7FF',
+    colorKey: 'secondary',
   },
 ];
 
@@ -83,22 +83,30 @@ export default function OnboardingScreen({ onComplete }: { onComplete: () => voi
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ width: width * SLIDES.length }}
       >
-        {SLIDES.map((s, idx) => (
-          <View key={idx} style={[styles.slide, { width }]}>
-            <View style={[styles.emojiContainer, { backgroundColor: s.color + '20' }]}>
-              <Text style={styles.emoji}>{s.emoji}</Text>
+        {SLIDES.map((s, idx) => {
+          const slideColor = colors[s.colorKey];
+          return (
+            <View key={idx} style={[styles.slide, { width }]}>
+              <View
+                style={[
+                  styles.emojiContainer,
+                  { backgroundColor: slideColor + '20' },
+                ]}
+              >
+                <Text style={styles.emoji}>{s.emoji}</Text>
+              </View>
+              <Text variant="headlineMedium" style={[styles.title, { color: colors.onSurface }]}>
+                {s.title}
+              </Text>
+              <Text
+                variant="bodyLarge"
+                style={[styles.description, { color: colors.onSurfaceVariant }]}
+              >
+                {s.description}
+              </Text>
             </View>
-            <Text variant="headlineMedium" style={[styles.title, { color: colors.onSurface }]}>
-              {s.title}
-            </Text>
-            <Text
-              variant="bodyLarge"
-              style={[styles.description, { color: colors.onSurfaceVariant }]}
-            >
-              {s.description}
-            </Text>
-          </View>
-        ))}
+          );
+        })}
       </ScrollView>
 
       <View style={styles.footer}>
