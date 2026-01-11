@@ -5,6 +5,7 @@ import { jwtEncode } from './tokenService';
 const AUTH_TOKEN_KEY = 'mood_diary_auth_token';
 const PASSWORD_SET_KEY = 'mood_diary_password_set';
 const STORED_PASSWORD_KEY = 'mood_diary_stored_password';
+const PASSWORD_HINT_KEY = 'mood_diary_password_hint';
 
 // Check if password has been set by the user
 const isPasswordSet = async (): Promise<boolean> => {
@@ -38,7 +39,7 @@ const getStoredPassword = async (): Promise<string | null> => {
 
 export const mobileAuthService = {
   // Create password for first-time users
-  signup: async (password: string): Promise<boolean> => {
+  signup: async (password: string, hint?: string): Promise<boolean> => {
     if (!password || password.trim().length < 6) {
       console.error('Password must be at least 6 characters');
       return false;
@@ -55,6 +56,15 @@ export const mobileAuthService = {
 
       // Mark password as set
       await AsyncStorage.setItem(PASSWORD_SET_KEY, 'true');
+
+      // Store password hint if provided
+      if (hint && hint.trim()) {
+        try {
+          await SecureStore.setItemAsync(PASSWORD_HINT_KEY, hint.trim());
+        } catch {
+          await AsyncStorage.setItem(PASSWORD_HINT_KEY, hint.trim());
+        }
+      }
 
       // Automatically login after signup
       return await mobileAuthService.login(password);
@@ -98,6 +108,63 @@ export const mobileAuthService = {
 
   // Check if password has been set up
   isPasswordSetup: isPasswordSet,
+
+  // Get password hint
+  getPasswordHint: async (): Promise<string | null> => {
+    try {
+      // Try secure store first
+      try {
+        const hint = await SecureStore.getItemAsync(PASSWORD_HINT_KEY);
+        if (hint) return hint;
+      } catch {
+        // Fall back to AsyncStorage
+      }
+
+      const hint = await AsyncStorage.getItem(PASSWORD_HINT_KEY);
+      return hint;
+    } catch (error) {
+      console.error('Failed to get password hint:', error);
+      return null;
+    }
+  },
+
+  // Reset password with current password verification
+  resetPassword: async (oldPassword: string, newPassword: string, newHint?: string): Promise<boolean> => {
+    try {
+      // Verify old password
+      const storedPassword = await getStoredPassword();
+      if (oldPassword !== storedPassword) {
+        return false;
+      }
+
+      if (!newPassword || newPassword.trim().length < 6) {
+        console.error('New password must be at least 6 characters');
+        return false;
+      }
+
+      // Store new password
+      try {
+        await SecureStore.setItemAsync(STORED_PASSWORD_KEY, newPassword);
+      } catch {
+        await AsyncStorage.setItem(STORED_PASSWORD_KEY, newPassword);
+      }
+
+      // Update hint if provided
+      if (newHint && newHint.trim()) {
+        try {
+          await SecureStore.setItemAsync(PASSWORD_HINT_KEY, newHint.trim());
+        } catch {
+          await AsyncStorage.setItem(PASSWORD_HINT_KEY, newHint.trim());
+        }
+      }
+
+      // Auto-login with new password
+      return await mobileAuthService.login(newPassword);
+    } catch (error) {
+      console.error('Failed to reset password:', error);
+      return false;
+    }
+  },
 
   // Check if user is authenticated
   isAuthenticated: async (): Promise<boolean> => {

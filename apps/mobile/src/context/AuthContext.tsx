@@ -7,7 +7,7 @@ interface AuthContextType {
   isLoading: boolean;
   isPasswordSetup: boolean;
   login: (password: string) => Promise<boolean>;
-  signup: (password: string) => Promise<boolean>;
+  signup: (password: string, hint?: string) => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
@@ -49,8 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signup = useCallback(async (password: string): Promise<boolean> => {
-    const success = await mobileAuthService.signup(password);
+  const signup = useCallback(async (password: string, hint?: string): Promise<boolean> => {
+    const success = await mobileAuthService.signup(password, hint);
     if (success) {
       setIsAuthenticated(true);
       setIsPasswordSetup(true);

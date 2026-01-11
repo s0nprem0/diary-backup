@@ -3,12 +3,15 @@ import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, TextInput, Button, useTheme } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
+import { mobileAuthService } from '../services/authService';
 
 export default function LoginScreen() {
   const { login, signup, isPasswordSetup, isLoading } = useAuth();
   const { colors } = useTheme();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [hint, setHint] = useState('');
+  const [showHint, setShowHint] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -39,7 +42,7 @@ export default function LoginScreen() {
 
     try {
       const success = isSignupMode
-        ? await signup(password)
+        ? await signup(password, hint)
         : await login(password);
 
       if (!success) {
@@ -52,6 +55,15 @@ export default function LoginScreen() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    const storedHint = await mobileAuthService.getPasswordHint();
+    if (storedHint) {
+      setShowHint(storedHint);
+    } else {
+      setShowHint('No hint was set for this password');
     }
   };
 
@@ -111,10 +123,33 @@ export default function LoginScreen() {
             </View>
           )}
 
+          {isSignupMode && (
+            <View style={styles.inputContainer}>
+              <TextInput
+                label="Password Hint (optional)"
+                placeholder="e.g., My pet's name"
+                value={hint}
+                onChangeText={setHint}
+                mode="outlined"
+                editable={!loading}
+              />
+              <Text style={[styles.hintInfo, { color: colors.onSurfaceVariant }]}>
+                This hint will help you remember your password
+              </Text>
+            </View>
+          )}
+
           {error && (
             <Text style={[styles.error, { color: colors.error }]}>
               {error}
             </Text>
+          )}
+
+          {showHint && !isSignupMode && (
+            <View style={[styles.hintBox, { backgroundColor: colors.primaryContainer }]}>
+              <Text style={[styles.hintLabel, { color: colors.onPrimaryContainer }]}>💡 Your hint:</Text>
+              <Text style={[styles.hintText, { color: colors.onPrimaryContainer }]}>{showHint}</Text>
+            </View>
           )}
 
           <Button
@@ -132,6 +167,17 @@ export default function LoginScreen() {
               ? 'Create Password'
               : 'Unlock Diary'}
           </Button>
+
+          {!isSignupMode && (
+            <Button
+              mode="text"
+              onPress={handleForgotPassword}
+              disabled={loading}
+              style={{ marginBottom: 16 }}
+            >
+              Forgot Password?
+            </Button>
+          )}
 
             <Text style={[styles.info, { color: colors.onSurfaceVariant }]}>
               All entries are stored locally and remain private
@@ -181,6 +227,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 16,
     textAlign: 'center',
+  },
+  hintInfo: {
+    fontSize: 11,
+    marginTop: 4,
+    marginLeft: 12,
+  },
+  hintBox: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    width: '100%',
+  },
+  hintLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  hintText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   button: {
     width: '100%',
