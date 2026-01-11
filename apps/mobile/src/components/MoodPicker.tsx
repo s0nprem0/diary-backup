@@ -13,22 +13,31 @@ const MOODS = [
 
 export default function MoodPicker({ value, onChange }: { value?: string; onChange: (m: string) => void }) {
   const { colors } = useTheme();
+  const selectedStyle = { borderColor: colors.primary, transform: [{ scale: 1.06 }] };
+
   return (
     <View style={styles.row}>
-      {MOODS.map((m) => (
-        <TouchableOpacity
-          key={m.key}
-          onPress={() => {
-            Haptics.selectionAsync();
-            onChange(m.key);
-          }}
-          accessibilityLabel={m.label}
-          style={[styles.button, value === m.key && { borderColor: colors.primary, transform: [{ scale: value === m.key ? 1.06 : 1 }] }]}
-        >
-          <Text style={styles.emoji}>{m.emoji}</Text>
-          <Text style={styles.label}>{m.label}</Text>
-        </TouchableOpacity>
-      ))}
+      {MOODS.map((m) => {
+        const isSelected = value === m.key;
+        return (
+          <TouchableOpacity
+            key={m.key}
+            onPress={async () => {
+              try {
+                await Haptics.selectionAsync();
+              } catch {
+                /* ignore haptics errors */
+              }
+              onChange(m.key);
+            }}
+            accessibilityLabel={m.label}
+            style={[styles.button, { backgroundColor: colors.surface }, isSelected && selectedStyle]}
+          >
+            <Text style={styles.emoji}>{m.emoji}</Text>
+            <Text style={[styles.label, { color: colors.onSurface }]}>{m.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -43,9 +52,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'transparent',
-    backgroundColor: '#fff',
     elevation: 2,
   },
   emoji: { fontSize: 28 },
-  label: { marginTop: 6, fontSize: 12, color: '#333' },
+  label: { marginTop: 6, fontSize: 12 },
 });
