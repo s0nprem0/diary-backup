@@ -8,7 +8,9 @@ import { Provider as PaperProvider } from 'react-native-paper';
 
 import AddEntryScreen from './src/screens/AddEntryScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
+import LoginScreen from './src/screens/LoginScreen';
 import BottomTabs from './src/navigation/BottomTabs';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { lightTheme, darkTheme } from './src/theme';
 import { syncPendingEntries } from './src/services/entriesService';
 import { ENTRIES_API } from './config';
@@ -29,6 +31,7 @@ const postEntryToServer = async (entry: any) => {
 };
 
 export type RootStackParamList = {
+  Login: undefined;
   Onboarding: undefined;
   Main: undefined;
   Home: undefined;
@@ -43,7 +46,8 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const THEME_KEY = 'APP_THEME_DARK';
 const ONBOARDING_KEY = 'APP_ONBOARDED';
 
-export default function App() {
+function AppNavigator() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [isDark, setIsDark] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,7 +89,7 @@ export default function App() {
     setHasOnboarded(true);
   };
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return null;
   }
 
@@ -93,23 +97,32 @@ export default function App() {
     <SafeAreaProvider>
       <PaperProvider theme={isDark ? (darkTheme as any) : (lightTheme as any)}>
         <NavigationContainer>
-          <Stack.Navigator initialRouteName={hasOnboarded ? 'Main' : 'Onboarding'} screenOptions={{ headerShown: false }}>
-            {!hasOnboarded && (
-              <Stack.Screen
-                name="Onboarding"
-              >
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            {!isAuthenticated ? (
+              <Stack.Screen name="Login" component={LoginScreen} />
+            ) : !hasOnboarded ? (
+              <Stack.Screen name="Onboarding">
                 {() => <OnboardingScreen onComplete={handleOnboardingComplete} />}
               </Stack.Screen>
+            ) : (
+              <>
+                <Stack.Screen name="Main">
+                  {() => <BottomTabs isDark={isDark} setIsDark={setIsDark} />}
+                </Stack.Screen>
+                <Stack.Screen name="AddEntry" component={AddEntryScreen} />
+              </>
             )}
-            <Stack.Screen name="Main">
-              {() => <BottomTabs isDark={isDark} setIsDark={setIsDark} />}
-            </Stack.Screen>
-
-            {/* keep AddEntry as a dedicated screen */}
-            <Stack.Screen name="AddEntry" component={AddEntryScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </PaperProvider>
     </SafeAreaProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppNavigator />
+    </AuthProvider>
   );
 }

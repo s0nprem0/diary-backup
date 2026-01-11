@@ -3,11 +3,13 @@ import { View, ScrollView, Alert } from 'react-native';
 import { Switch, Text, Button, useTheme, Card, Divider } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getReminderTime, isReminderEnabled, setDailyReminder, disableReminders, formatReminderTime } from '../services/reminders';
+import { useAuth } from '../context/AuthContext';
 
 const THEME_KEY = 'APP_THEME_DARK';
 
 export default function SettingsScreen({ setIsDark, isDark: propIsDark }: { setIsDark: (v: boolean) => void; isDark?: boolean }) {
   const { colors } = useTheme();
+  const { logout } = useAuth();
   const [isDark, setLocalDark] = useState<boolean>(propIsDark ?? false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState<{ hour: number; minute: number } | null>(null);
@@ -128,6 +130,32 @@ export default function SettingsScreen({ setIsDark, isDark: propIsDark }: { setI
         <Text variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 12, lineHeight: 20 }}>
           Mood Diary helps you track your emotional well-being over time. All entries are stored locally and synced securely when online.
         </Text>
+      </View>
+
+      {/* Security Section */}
+      <View style={{ marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.outlineVariant }}>
+        <Text variant="labelMedium" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
+          Security
+        </Text>
+        <Button
+          mode="outlined"
+          onPress={() => {
+            Alert.alert('Logout', 'Are you sure you want to logout? You will need to enter your password again.', [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Logout',
+                onPress: async () => {
+                  await logout();
+                },
+                style: 'destructive',
+              },
+            ]);
+          }}
+          icon="logout"
+          textColor={colors.error}
+        >
+          Logout
+        </Button>
       </View>
     </ScrollView>
   );
