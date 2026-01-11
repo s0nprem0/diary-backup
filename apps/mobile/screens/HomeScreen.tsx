@@ -5,10 +5,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
-
-const API_URL = Platform.OS === 'android'
-  ? 'http://10.0.2.2:3001/entries'
-  : 'http://localhost:3001/entries';
+import { ENTRIES_API } from '../config'; // Import shared config
 
 interface Entry {
   _id: string;
@@ -32,9 +29,9 @@ export default function HomeScreen({ navigation }: any) {
         return;
       }
 
-      const res = await fetch(API_URL, {
+      const res = await fetch(ENTRIES_API, {
         headers: {
-          'Authorization': `Bearer ${token}` // CRITICAL FIX
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -62,11 +59,11 @@ export default function HomeScreen({ navigation }: any) {
 
     try {
       const token = await SecureStore.getItemAsync('token');
-      const res = await fetch(API_URL, {
+      const res = await fetch(ENTRIES_API, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // CRITICAL FIX
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ content: text }),
       });

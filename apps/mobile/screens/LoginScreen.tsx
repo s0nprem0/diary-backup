@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { StatusBar } from 'expo-status-bar';
-
-const API_URL = Platform.OS === 'android'
-  ? 'http://10.0.2.2:3001/auth'
-  : 'http://localhost:3001/auth';
+import { AUTH_API } from '../config'; // Import shared config
 
 export default function LoginScreen({ navigation }: any) {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -22,7 +19,7 @@ export default function LoginScreen({ navigation }: any) {
     const endpoint = isRegistering ? '/register' : '/login';
 
     try {
-      const res = await fetch(`${API_URL}${endpoint}`, {
+      const res = await fetch(`${AUTH_API}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
