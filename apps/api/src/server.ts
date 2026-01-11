@@ -1,16 +1,14 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
-import { connectDB } from "./config/db";
+import { initStorage } from "./config/db";
 import { Entry } from "./models/Entry";
 import { analyzeEmotion } from "./services/emotionService";
-import { authMiddleware } from "./middleware/auth";
 
-dotenv.config();
-connectDB();
+// Initialize local file storage
+initStorage();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = 3001;
 
 app.use(cors());
 app.use(express.json());
@@ -20,20 +18,20 @@ app.get("/", (req, res) => {
   res.json({ message: "Mood Diary API is running! 🚀" });
 });
 
-// DIARY ROUTES (Protected with offline auth)
+// DIARY ROUTES (Offline - No authentication needed)
 
-// 3. Get Entries (auth optional but recommended)
-app.get("/entries", authMiddleware, async (req, res) => {
+// Get all entries
+app.get("/entries", async (req, res) => {
   try {
-    const entries = await Entry.find().sort({ createdAt: -1 });
+    const entries = await Entry.find();
     res.json(entries);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch entries" });
   }
 });
 
-// 4. Create Entry (auth optional but recommended)
-app.post("/entries", authMiddleware, async (req, res) => {
+// Create new entry
+app.post("/entries", async (req, res) => {
   try {
     const { content } = req.body;
 
@@ -59,8 +57,8 @@ app.post("/entries", authMiddleware, async (req, res) => {
   }
 });
 
-// 5. Get Single Entry by ID (auth optional but recommended)
-app.get("/entries/:id", authMiddleware, async (req, res) => {
+// Get single entry by ID
+app.get("/entries/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const entry = await Entry.findById(id);
@@ -77,8 +75,8 @@ app.get("/entries/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// 6. Update Entry content (auth optional but recommended)
-app.patch("/entries/:id", authMiddleware, async (req, res) => {
+// Update entry
+app.patch("/entries/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { content } = req.body;
@@ -109,8 +107,8 @@ app.patch("/entries/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// 7. Delete Entry (auth optional but recommended)
-app.delete("/entries/:id", authMiddleware, async (req, res) => {
+// Delete entry
+app.delete("/entries/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const deleted = await Entry.findByIdAndDelete(id);

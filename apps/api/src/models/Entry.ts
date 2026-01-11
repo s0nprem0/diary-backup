@@ -1,25 +1,76 @@
-import mongoose from "mongoose";
+import { readEntries, writeEntries, generateId, StoredEntry } from '../config/db';
 
-const entrySchema = new mongoose.Schema(
-  {
-    content: {
-      type: String,
-      required: true, // User must write something
-    },
-    mood: {
-      type: String,
-      required: true, // e.g., "Happy", "Sad", "Neutral"
-    },
-    sentimentScore: {
-      type: Number, // e.g., 0.8 (Positive) or -0.5 (Negative)
-      required: true,
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now, // Automatically set the date
-    },
-  },
-  { timestamps: true }
-);
+export interface EntryInput {
+  content: string;
+  mood: string;
+  sentimentScore: number;
+}
 
-export const Entry = mongoose.model("Entry", entrySchema);
+export class Entry {
+  // Find all entries, sorted by creation date (newest first)
+  static async find(): Promise<StoredEntry[]> {
+    const entries = readEntries();
+    return entries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  // Find entry by ID
+  static async findById(id: string): Promise<StoredEntry | null> {
+    const entries = readEntries();
+    return entries.find(entry => entry._id === id) || null;
+  }
+
+  // Create new entry
+  static async create(data: EntryInput): Promise<StoredEntry> {
+    const entries = readEntries();
+    const now = new Date().toISOString();
+
+    const newEntry: StoredEntry = {
+      _id: generateId(),
+      content: data.content,
+      mood: data.mood,
+      sentimentScore: data.sentimentScore,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    entries.push(newEntry);
+    writeEntries(entries);
+
+    return newEntry;
+  }
+
+  // Update entry by ID
+  static async findByIdAndUpdate(
+    id: string,
+    update: Partial<EntryInput>,
+    options?: { new?: boolean }
+  ): Promise<StoredEntry | null> {
+    const entries = readEntries();
+    const index = entries.findIndex(entry => entry._id === id);
+
+    if (index === -1) return null;
+
+    entries[index] = {
+      ...entries[index],
+      ...update,
+      updatedAt: new Date().toISOString(),
+    };
+
+    writeEntries(entries);
+    return options?.new ? entries[index] : null;
+  }
+
+  // Delete entry by ID
+  static async findByIdAndDelete(id: string): Promise<StoredEntry | null> {
+    const entries = readEntries();
+    const index = entries.findIndex(entry => entry._id === id);
+
+    if (index === -1) return null;
+
+    const deleted = entries[index];
+    entries.splice(index, 1);
+    writeEntries(entries);
+
+    return deleted;
+  }
+}
