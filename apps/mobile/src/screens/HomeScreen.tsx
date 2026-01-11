@@ -104,12 +104,6 @@ export default function HomeScreen({ navigation }: any) {
           ))
         )}
       </ScrollView>
-      <FAB
-        icon="plus"
-        onPress={() => navigation.navigate('AddEntry')}
-        style={styles.fab}
-        accessibilityLabel="Add entry"
-      />
     </SafeAreaView>
   );
 }
