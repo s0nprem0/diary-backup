@@ -1,18 +1,44 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Button, Text, useTheme } from 'react-native-paper';
-import MoodPicker from '../components/MoodPicker';
 import { addEntry } from '../services/entriesService';
+import { ENTRIES_API } from '../../config';
 import * as Haptics from 'expo-haptics';
 
 export default function AddEntryScreen({ navigation }: any) {
   const { colors } = useTheme();
-  const [mood, setMood] = useState('good');
   const [notes, setNotes] = useState('');
 
   const handleSave = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await addEntry({ date: new Date().toISOString(), mood, notes });
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {
+      /* ignore haptics errors */
+    }
+
+    try {
+      const res = await fetch(ENTRIES_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: notes || '' }),
+      });
+
+      if (res.ok) {
+        const remote = await res.json();
+        await addEntry({
+          date: remote.createdAt || new Date().toISOString(),
+          mood: remote.mood || 'Neutral',
+          notes: remote.content || notes,
+        });
+      } else {
+        // fallback: save locally with unknown mood
+        await addEntry({ date: new Date().toISOString(), mood: 'Unknown', notes });
+      }
+    } catch (e) {
+      // network error -> save locally
+      await addEntry({ date: new Date().toISOString(), mood: 'Unknown', notes });
+    }
+
     navigation.navigate('Home');
   };
 
@@ -20,7 +46,7 @@ export default function AddEntryScreen({ navigation }: any) {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <View style={{ padding: 16 }}>
         <Text variant="headlineSmall" style={{ marginBottom: 8 }}>How are you feeling?</Text>
-        <MoodPicker value={mood} onChange={setMood} />
+
         <TextInput
           placeholder="Write a short note..."
           value={notes}
