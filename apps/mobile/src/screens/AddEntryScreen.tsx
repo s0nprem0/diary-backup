@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TextInput, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
-import { Button, Text, useTheme, Snackbar, Chip, ActivityIndicator } from 'react-native-paper';
+import { Button, Text, useTheme, Snackbar } from 'react-native-paper';
 import { addEntry, updateEntry } from '../services/entriesService';
 import { mobileAuthService } from '../services/authService';
 import { ENTRIES_API } from '../../config';
 import { inferMood } from '../services/mood';
-import { MOOD_OPTIONS, getMoodEmoji } from '../services/moodUtils';
+import { getMoodEmoji } from '../services/moodUtils';
 import * as Haptics from 'expo-haptics';
 
 export default function AddEntryScreen({ navigation, route }: any) {
   const { colors } = useTheme();
   const existing = route?.params?.entry;
   const [notes, setNotes] = useState(existing?.notes || '');
-  const [mood, setMood] = useState(existing?.mood || 'Neutral');
+  const [mood, setMood] = useState(existing?.mood || '');
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isAutoDetected, setIsAutoDetected] = useState(false);
   const isEditing = !!existing;
   const initialNotes = existing?.notes || '';
 
@@ -23,8 +22,7 @@ export default function AddEntryScreen({ navigation, route }: any) {
   useEffect(() => {
     if (!isEditing && notes.trim()) {
       const { mood: predictedMood } = inferMood(notes);
-      setMood(predictedMood);
-      setIsAutoDetected(true);
+      setMood(predictedMood || 'Neutral');
     }
   }, [notes, isEditing]);
 
