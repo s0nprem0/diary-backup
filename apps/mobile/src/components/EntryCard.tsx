@@ -62,25 +62,27 @@ export default function EntryCard({ entry, onEdit, onDelete }: { entry: any; onE
           {entry.notes}
         </Text>
 
-        {/* Actions */}
-        <View style={styles.actions}>
-          {onEdit && (
-            <IconButton
-              icon="pencil"
-              size={24}
-              onPress={() => onEdit(entry)}
-              accessibilityLabel="Edit entry"
-            />
-          )}
-          {onDelete && (
-            <IconButton
-              icon="delete"
-              size={24}
-              onPress={() => onDelete(entry.id)}
-              accessibilityLabel="Delete entry"
-            />
-          )}
-        </View>
+        {/* Actions (shown only when callbacks provided) */}
+        {(onEdit || onDelete) && (
+          <View style={styles.actions}>
+            {onEdit && (
+              <IconButton
+                icon="pencil"
+                size={24}
+                onPress={() => onEdit(entry)}
+                accessibilityLabel="Edit entry"
+              />
+            )}
+            {onDelete && (
+              <IconButton
+                icon="delete"
+                size={24}
+                onPress={() => onDelete(entry.id)}
+                accessibilityLabel="Delete entry"
+              />
+            )}
+          </View>
+        )}
       </Card.Content>
     </Card>
     </Animated.View>

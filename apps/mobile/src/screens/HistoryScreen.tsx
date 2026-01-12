@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, View, Alert } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, useTheme, Searchbar, Chip, Button } from 'react-native-paper';
-import { getEntries, deleteEntry } from '../services/entriesService';
+import { getEntries } from '../services/entriesService';
 import { MOOD_OPTIONS, getMoodEmoji } from '../services/moodUtils';
 import EntryCard from '../components/EntryCard';
 
@@ -71,21 +71,7 @@ export default function HistoryScreen({ navigation }: any) {
     return unsub;
   }, [navigation]);
 
-  const handleEdit = (entry: any) => navigation.navigate('AddEntry', { entry });
-
-  const handleDelete = (id: string) => {
-    Alert.alert('Delete entry?', 'This action cannot be undone.', [
-      { text: 'Keep it', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteEntry(id);
-          await loadEntries();
-        },
-      },
-    ]);
-  };
+  // Read-only history: no edit or delete actions here
 
   // Filter entries by search query and mood
   const filteredEntries = entries.filter((e) => {
@@ -201,7 +187,7 @@ export default function HistoryScreen({ navigation }: any) {
                   {groupName}
                 </Text>
                 {groupEntries.map((e) => (
-                  <EntryCard key={e.id || e._id} entry={e} onEdit={handleEdit} onDelete={handleDelete} />
+                  <EntryCard key={e.id || e._id} entry={e} />
                 ))}
               </View>
             ))
